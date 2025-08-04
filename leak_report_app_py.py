@@ -8,104 +8,62 @@ Original file is located at
 """
 
 import streamlit as st
-import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
-import os
-import smtplib
-from email.message import EmailMessage
 
-# --- Email config (Mailtrap) ---
-smtp_server = "sandbox.smtp.mailtrap.io"
-smtp_port = 2525
-smtp_user = "57ce8f34059f69"
-smtp_password = "ca2168fedda898"
-sender_email = "your_email@example.com"  # Replace with your sender email
+# Google Sheets setup
+SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
+CREDS_FILE = "path/to/your/service_account_key.json"  # Replace with your JSON key path
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  
 
-# Municipality emails (all to same placeholder)
-municipality_emails = {
-    "City of Johannesburg": "nompi1369@icloud.com",
-    "City of Cape Town": "nompi1369@icloud.com",
-    "eThekwini": "nompi1369@icloud.com",
-    "Buffalo City": "nompi1369@icloud.com",
-    "Mangaung": "nompi1369@icloud.com",
-    "Nelson Mandela Bay": "nompi1369@icloud.com",
-    "Other": "nompi1369@icloud.com"
-}
+@st.cache_resource
+def get_sheet():
+    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPE)
+    client = gspread.authorize(creds)
+    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+    return spreadsheet.sheet1
 
-# Send email helpers
-def send_email(to_email, subject, content):
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(content)
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
+sheet = get_sheet()
 
-def send_email_to_municipality(to_email, report):
-    subject = f"🚰 New Water Leakage Report: {report['ReportID']}"
-    content = f"""
-A new water leakage report has been submitted:
+def append_report(report):
+    sheet.append_row([
+        report["ReportID"],
+        report["Name"],
+        report["Contact"],
+        report["Municipality"],
+        report["Leak Type"],
+        report["Location"],
+        report["DateTime"],
+        report.get("Status", "Pending"),
+    ])
 
-Report ID: {report['ReportID']}
-Name: {report['Name']}
-Contact: {report['Contact']}
-Municipality: {report['Municipality']}
-Leak Type: {report['Leak Type']}
-Location: {report['Location']}
-DateTime: {report['DateTime']}
-Status: {report['Status']}
-"""
-    return send_email(to_email, subject, content)
+def generate_report_id():
+    return f"WR{int(datetime.now().timestamp())}"
 
-def send_receipt_to_user(to_email, report):
-    subject = f"✅ Water Leak Report Received - Reference {report['ReportID']}"
-    content = f"""
-Hi {report['Name']},
-
-Thank you for reporting a water leakage.
-
-We have received your report and forwarded it to your municipality (**{report['Municipality']}**).
-
-🧾 Your Report Details:
-- Report ID: {report['ReportID']}
-- Date/Time: {report['DateTime']}
-- Leak Type: {report['Leak Type']}
-- Location: {report['Location']}
-- Status: {report['Status']}
-
-Thank you for helping to conserve water and maintain infrastructure.
-
-💧 Water Reporting Team
-"""
-    return send_email(to_email, subject, content)
-
-# Streamlit UI
-st.set_page_config(page_title="Water Leakage Reporting - User", page_icon="🚰")
+# --- Streamlit UI ---
 st.title("🚰 Water Leakage Reporting App")
-st.markdown("Help your community by reporting water leaks. Fill the form below:")
 
-# Input fields
 name = st.text_input("Full Name")
-contact = st.text_input("Contact Email")
-municipality = st.selectbox("Select Your Municipality", list(municipality_emails.keys()))
+contact = st.text_input("Contact Information (Phone/Email)")
+municipality = st.selectbox("Select Your Municipality", [
+    "City of Johannesburg",
+    "City of Cape Town",
+    "eThekwini",
+    "Buffalo City",
+    "Mangaung",
+    "Nelson Mandela Bay",
+    "Other"
+])
 leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-location = st.text_input("Location of the Leak (address or description)")
-image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+location = st.text_input("Location of Leak")
 
 if st.button("Submit Report"):
-    if not name or not contact or not location:
-        st.error("❗ Please fill in all required fields.")
+    if not (name and contact and municipality and leak_type and location):
+        st.error("Please fill in all fields.")
     else:
-        report_id = f"LEAK-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         report = {
-            "ReportID": report_id,
+            "ReportID": generate_report_id(),
             "Name": name,
             "Contact": contact,
             "Municipality": municipality,
@@ -114,48 +72,5 @@ if st.button("Submit Report"):
             "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Status": "Pending"
         }
-
-        # Save report to CSV
-        df = pd.DataFrame([report])
-        file_exists = os.path.isfile("leak_reports.csv")
-        df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
-
-        # Save image if uploaded
-        if image:
-            os.makedirs("leak_images", exist_ok=True)
-            image_path = os.path.join("leak_images", f"{report_id}_{image.name}")
-            with open(image_path, "wb") as f:
-                f.write(image.read())
-
-        # Send emails
-        municipality_email = municipality_emails[municipality]
-        muni_email_sent = send_email_to_municipality(municipality_email, report)
-        user_receipt_sent = send_receipt_to_user(contact, report)
-
-        if muni_email_sent:
-            st.success(f"✅ Report submitted! Your reference number is **{report_id}**")
-        else:
-            st.warning("⚠️ Report saved but failed to send email to municipality.")
-
-        if user_receipt_sent:
-            st.success("📨 Confirmation email sent to your address.")
-        else:
-            st.warning("⚠️ Could not send confirmation email to you.")
-
-        with st.expander("📋 View Report Summary"):
-            st.json(report)
-
-st.markdown("---")
-st.subheader("🔎 Track Your Report Status")
-search_id = st.text_input("Enter your Report ID")
-
-if st.button("Check Status"):
-    if os.path.exists("leak_reports.csv"):
-        df = pd.read_csv("leak_reports.csv")
-        report = df[df["ReportID"] == search_id]
-        if not report.empty:
-            st.table(report[["ReportID", "Status", "Municipality", "DateTime"]])
-        else:
-            st.error("❌ No report found with that ID.")
-    else:
-        st.warning("📁 No reports found yet.")
+        append_report(report)
+        st.success(f"Report submitted successfully! Your Report ID is **{report['ReportID']}**.")
