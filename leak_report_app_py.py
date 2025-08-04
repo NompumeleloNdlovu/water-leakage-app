@@ -50,9 +50,9 @@ def is_valid_email(email):
 def send_reference_email(to_email, ref_code, name):
     smtp_server = "sandbox.smtp.mailtrap.io"
     smtp_port = 2525
-    smtp_user = st.secrets["user"]
-    smtp_password = st.secrets["password"]
-    
+    smtp_user = st.secrets["mailtrap"]["user"]
+    smtp_password = st.secrets["mailtrap"]["password"]
+
     sender_email = "leak-reporter@municipality.org"
     subject = "Your Water Leak Report - Reference Code"
     
