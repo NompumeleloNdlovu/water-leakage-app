@@ -8,69 +8,104 @@ Original file is located at
 """
 
 import streamlit as st
+import pandas as pd
+from datetime import datetime
+import json
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+import smtplib
+from email.message import EmailMessage
 
-# Google Sheets setup
-SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDS_FILE = "waterleakagereport-a7293c7d9ebe.json"  # Replace with your JSON key path
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  
+# --- Load Google Service Account credentials from Streamlit Secrets ---
+json_key_str = st.secrets["google_service_account"]["json_key"]
+service_account_info = json.loads(json_key_str)
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+client = gspread.authorize(creds)
+
+# Your Google Sheet ID here
+SPREADSHEET_ID = "your_google_sheet_id_here"
 
 @st.cache_resource
 def get_sheet():
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPE)
-    client = gspread.authorize(creds)
-    spreadsheet = client.open_by_key(SPREADSHEET_ID)
-    return spreadsheet.sheet1
+    return client.open_by_key(SPREADSHEET_ID).sheet1
 
 sheet = get_sheet()
 
-def append_report(report):
-    sheet.append_row([
-        report["ReportID"],
-        report["Name"],
-        report["Contact"],
-        report["Municipality"],
-        report["Leak Type"],
-        report["Location"],
-        report["DateTime"],
-        report.get("Status", "Pending"),
-    ])
+# --- Email sending function ---
+def send_email(to_email, subject, body):
+    smtp_server = "sandbox.smtp.mailtrap.io"
+    smtp_port = 2525
+    smtp_user = st.secrets["mailtrap"]["user"]
+    smtp_password = st.secrets["mailtrap"]["password"]
 
-def generate_report_id():
-    return f"WR{int(datetime.now().timestamp())}"
+    sender_email = "your_email@example.com"  # Change to your desired sender
 
-# --- Streamlit UI ---
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        st.error(f"Error sending email: {e}")
+        return False
+
+# --- App UI ---
+
 st.title("🚰 Water Leakage Reporting App")
 
+# Input fields
 name = st.text_input("Full Name")
-contact = st.text_input("Contact Information (Phone/Email)")
-municipality = st.selectbox("Select Your Municipality", [
-    "City of Johannesburg",
-    "City of Cape Town",
-    "eThekwini",
-    "Buffalo City",
-    "Mangaung",
-    "Nelson Mandela Bay",
-    "Other"
-])
-leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-location = st.text_input("Location of Leak")
+contact = st.text_input("Contact Information (Phone or Email)")
+municipality = st.selectbox("Select Your Municipality", ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"])
+leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
+leak_type = st.selectbox("Type of Leak", leak_types)
+location = st.text_input("Location of Leak (enter manually)")
 
 if st.button("Submit Report"):
     if not (name and contact and municipality and leak_type and location):
-        st.error("Please fill in all fields.")
+        st.error("Please complete all required fields.")
     else:
-        report = {
-            "ReportID": generate_report_id(),
-            "Name": name,
-            "Contact": contact,
-            "Municipality": municipality,
-            "Leak Type": leak_type,
-            "Location": location,
-            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Status": "Pending"
-        }
-        append_report(report)
-        st.success(f"Report submitted successfully! Your Report ID is **{report['ReportID']}**.")
+        report_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        report = [name, contact, municipality, leak_type, location, report_time, "Pending"]
+
+        # Append to Google Sheet
+        try:
+            sheet.append_row(report)
+            st.success(f"Report submitted! Reference number: {sheet.row_count - 1}")
+
+            # Send confirmation email to user if contact is an email
+            if "@" in contact:
+                subject = "Leakage Report Received"
+                body = f"""Dear {name},
+
+Thank you for reporting a water leakage issue.
+
+Reference Number: {sheet.row_count - 1}
+Municipality: {municipality}
+Leak Type: {leak_type}
+Location: {location}
+Date & Time: {report_time}
+
+We will keep you updated on the status.
+
+Best regards,
+Water Leakage Reporting Team
+"""
+                send_email(contact, subject, body)
+
+        except Exception as e:
+            st.error(f"Failed to save report: {e}")
+
+# View all reports (optional, for debugging/admin)
+if st.checkbox("Show all reports"):
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    st.dataframe(df)
