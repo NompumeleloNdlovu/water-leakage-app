@@ -11,9 +11,18 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
+# Mailtrap credentials (only needed if you send emails from admin panel)
+mail_user = st.secrets["mailtrap"]["user"]
+mail_pass = st.secrets["mailtrap"]["password"]
+
+# Google Service Account (used for Sheets read/write)
+google_creds_dict = st.secrets["google_service_account"]
+
+# Admin authentication code
+ADMIN_CODE = st.secrets["general"]["admin_code"]
 # --- Config ---
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  # Your Google Sheet ID
-ADMIN_CODE = st.secrets.get("admin_code", "12345")  # Set your admin code in Streamlit secrets
+
 
 # --- Google Sheets setup ---
 def get_sheet():
