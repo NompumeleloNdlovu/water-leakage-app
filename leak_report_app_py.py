@@ -18,7 +18,7 @@ from email.message import EmailMessage
 import smtplib
 
 # --- Google Sheets Setup ---
-SPREADSHEET_ID = "your_google_sheet_id_here"
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
 def get_gsheet_client():
     creds = Credentials.from_service_account_info(
