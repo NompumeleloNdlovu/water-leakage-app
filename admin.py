@@ -64,6 +64,7 @@ municipalities = [
 ]
 municipality = st.selectbox("Select Your Municipality", municipalities)
 
+# Image uploader (optional)
 image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
 # Submission
@@ -101,3 +102,4 @@ if st.button("Submit Report"):
         # Show report summary
         with st.expander("📋 View Report Summary"):
             st.json(report)
+
