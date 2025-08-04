@@ -12,7 +12,6 @@ import pandas as pd
 import os
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime
 
 # --- Email config (Mailtrap) ---
 smtp_server = "sandbox.smtp.mailtrap.io"
@@ -21,7 +20,6 @@ smtp_user = "57ce8f34059f69"
 smtp_password = "ca2168fedda898"
 sender_email = "your_email@example.com"  # Replace with your sender email
 
-# Send email helper
 def send_email(to_email, subject, content):
     msg = EmailMessage()
     msg['Subject'] = subject
@@ -63,6 +61,13 @@ st.title("🚰 Water Leakage Reporting - Admin Panel")
 admin_code = st.text_input("Enter Admin Code", type="password")
 if admin_code == "letmein":
     if os.path.exists("leak_reports.csv"):
+
+        # Button to refresh data
+        if st.button("Refresh Reports"):
+            df = pd.read_csv("leak_reports.csv")
+            st.success("✅ Reports refreshed.")
+
+        # Always load latest data before displaying or updating
         df = pd.read_csv("leak_reports.csv")
         st.dataframe(df)
 
@@ -77,6 +82,10 @@ if admin_code == "letmein":
                 df.loc[df["ReportID"] == report_id, "Status"] = new_status
                 df.to_csv("leak_reports.csv", index=False)
                 st.success(f"Updated {report_id} status to {new_status}")
+
+                # Reload dataframe to show updated status
+                df = pd.read_csv("leak_reports.csv")
+                st.dataframe(df)
 
                 # Send update email to user
                 user_row = df[df["ReportID"] == report_id].iloc[0]
