@@ -8,104 +8,98 @@ Original file is located at
 """
 
 import streamlit as st
-import pandas as pd
+import os
+import re
 from datetime import datetime
-import json
 import gspread
 from google.oauth2.service_account import Credentials
-import smtplib
-from email.message import EmailMessage
 
-# --- Load Google Service Account credentials from Streamlit Secrets ---
-json_key_str = st.secrets["google_service_account"]["json_key"]
-service_account_info = json.loads(json_key_str)
+# --- Google Sheets setup ---
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  # Replace with your Google Sheets ID
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-client = gspread.authorize(creds)
+def save_report_to_sheets(report):
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(
+        st.secrets["google_service_account"],
+        scopes=scopes
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# Your Google Sheet ID here
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
+    # Append the report as a new row (ensure order matches your sheet headers)
+    row = [
+        report["Name"],
+        report["Contact"],
+        report["Municipality"],
+        report["Leak Type"],
+        report["Location"],
+        report["DateTime"]
+    ]
+    sheet.append_row(row)
 
-@st.cache_resource
-def get_sheet():
-    return client.open_by_key(SPREADSHEET_ID).sheet1
+# --- Helper functions ---
+def is_valid_email(email):
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return re.match(pattern, email) is not None
 
-sheet = get_sheet()
-
-# --- Email sending function ---
-def send_email(to_email, subject, body):
-    smtp_server = "sandbox.smtp.mailtrap.io"
-    smtp_port = 2525
-    smtp_user = st.secrets["mailtrap"]["user"]
-    smtp_password = st.secrets["mailtrap"]["password"]
-
-    sender_email = "your_email@example.com"  # Change to your desired sender
-
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(body)
-
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        st.error(f"Error sending email: {e}")
-        return False
-
-# --- App UI ---
-
+# --- Streamlit UI ---
 st.title("🚰 Water Leakage Reporting App")
+st.markdown("Help your community by reporting water leaks. Fill in the details below:")
 
-# Input fields
+# Inputs
 name = st.text_input("Full Name")
-contact = st.text_input("Contact Information (Phone or Email)")
-municipality = st.selectbox("Select Your Municipality", ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"])
+contact = st.text_input("Contact Information (Phone/Email)", placeholder="example@email.com")
+location = st.text_input("Location of Leak", placeholder="e.g., 123 Main St, Springfield")
+
 leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-leak_type = st.selectbox("Type of Leak", leak_types)
-location = st.text_input("Location of Leak (enter manually)")
+description = st.selectbox("Type of Leak", leak_types)
 
+municipalities = [
+    "City of Johannesburg",
+    "City of Cape Town",
+    "eThekwini",
+    "Buffalo City",
+    "Mangaung",
+    "Nelson Mandela Bay",
+    "Other"
+]
+municipality = st.selectbox("Select Your Municipality", municipalities)
+
+# Image uploader (optional)
+image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+
+# Submission
 if st.button("Submit Report"):
-    if not (name and contact and municipality and leak_type and location):
-        st.error("Please complete all required fields.")
+    if not name or not contact or not location or not description or not municipality:
+        st.error("❗ Please complete all required fields.")
+    elif '@' in contact and not is_valid_email(contact):
+        st.error("❗ Please enter a valid email address.")
     else:
-        report_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        report = [name, contact, municipality, leak_type, location, report_time, "Pending"]
+        # Save uploaded image if any
+        if image:
+            os.makedirs("leak_images", exist_ok=True)
+            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
+            with open(image_path, "wb") as f:
+                f.write(image.read())
+            st.success(f"Image saved as {image_path}")
 
-        # Append to Google Sheet
+        # Create report dict
+        report = {
+            "Name": name,
+            "Contact": contact,
+            "Municipality": municipality,
+            "Leak Type": description,
+            "Location": location,
+            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # Save report to Google Sheets
         try:
-            sheet.append_row(report)
-            st.success(f"Report submitted! Reference number: {sheet.row_count - 1}")
-
-            # Send confirmation email to user if contact is an email
-            if "@" in contact:
-                subject = "Leakage Report Received"
-                body = f"""Dear {name},
-
-Thank you for reporting a water leakage issue.
-
-Reference Number: {sheet.row_count - 1}
-Municipality: {municipality}
-Leak Type: {leak_type}
-Location: {location}
-Date & Time: {report_time}
-
-We will keep you updated on the status.
-
-Best regards,
-Water Leakage Reporting Team
-"""
-                send_email(contact, subject, body)
-
+            save_report_to_sheets(report)
+            st.success("✅ Report submitted successfully and saved to Google Sheets!")
         except Exception as e:
-            st.error(f"Failed to save report: {e}")
+            st.error(f"❗ Failed to save report to Google Sheets: {e}")
 
-# View all reports (optional, for debugging/admin)
-if st.checkbox("Show all reports"):
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    st.dataframe(df)
+        # Show report summary
+        with st.expander("📋 View Report Summary"):
+            st.json(report)
