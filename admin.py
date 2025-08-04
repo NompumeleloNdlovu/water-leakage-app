@@ -7,126 +7,97 @@ Original file is located at
     https://colab.research.google.com/drive/1S9lELbDuvcsZLsJ_P91yXmGgGXQLJ8-l
 """
 import streamlit as st
-import pandas as pd
-import json
+import os
+import re
+from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-import smtplib
-from email.message import EmailMessage
 
-# --- Load Google Service Account credentials ---
-json_key_str = st.secrets["google_service_account"]["json_key"]
-service_account_info = json.loads(json_key_str)
+# --- Google Sheets setup ---
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  # Replace with your Google Sheets ID
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-client = gspread.authorize(creds)
+def save_report_to_sheets(report):
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(
+        st.secrets["google_service_account"],
+        scopes=scopes
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# Your Google Sheet ID here
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
+    # Append the report as a new row (ensure order matches your sheet headers)
+    row = [
+        report["Name"],
+        report["Contact"],
+        report["Municipality"],
+        report["Leak Type"],
+        report["Location"],
+        report["DateTime"]
+    ]
+    sheet.append_row(row)
 
-@st.cache_resource
-def get_sheet():
-    return client.open_by_key(SPREADSHEET_ID).sheet1
+# --- Helper functions ---
+def is_valid_email(email):
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return re.match(pattern, email) is not None
 
-sheet = get_sheet()
+# --- Streamlit UI ---
+st.title("🚰 Water Leakage Reporting App")
+st.markdown("Help your community by reporting water leaks. Fill in the details below:")
 
-# Email sending function
-def send_email(to_email, subject, body):
-    smtp_server = "sandbox.smtp.mailtrap.io"
-    smtp_port = 2525
-    smtp_user = st.secrets["mailtrap"]["user"]
-    smtp_password = st.secrets["mailtrap"]["password"]
+# Inputs
+name = st.text_input("Full Name")
+contact = st.text_input("Contact Information (Phone/Email)", placeholder="example@email.com")
+location = st.text_input("Location of Leak", placeholder="e.g., 123 Main St, Springfield")
 
-    sender_email = "your_email@example.com"
+leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
+description = st.selectbox("Type of Leak", leak_types)
 
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(body)
+municipalities = [
+    "City of Johannesburg",
+    "City of Cape Town",
+    "eThekwini",
+    "Buffalo City",
+    "Mangaung",
+    "Nelson Mandela Bay",
+    "Other"
+]
+municipality = st.selectbox("Select Your Municipality", municipalities)
 
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        st.error(f"Error sending email: {e}")
-        return False
+image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-# Admin authentication (simple)
-ADMIN_CODE = st.secrets.get("admin_code", "12345")
+# Submission
+if st.button("Submit Report"):
+    if not name or not contact or not location or not description or not municipality:
+        st.error("❗ Please complete all required fields.")
+    elif '@' in contact and not is_valid_email(contact):
+        st.error("❗ Please enter a valid email address.")
+    else:
+        # Save uploaded image if any
+        if image:
+            os.makedirs("leak_images", exist_ok=True)
+            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
+            with open(image_path, "wb") as f:
+                f.write(image.read())
+            st.success(f"Image saved as {image_path}")
 
-def admin_login():
-    code = st.text_input("Enter Admin Code", type="password")
-    if code == ADMIN_CODE:
-        return True
-    elif code:
-        st.error("Incorrect admin code")
-    return False
+        # Create report dict
+        report = {
+            "Name": name,
+            "Contact": contact,
+            "Municipality": municipality,
+            "Leak Type": description,
+            "Location": location,
+            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
 
-if admin_login():
-    st.title("🚰 Water Leakage Reporting - Admin Panel")
+        # Save report to Google Sheets
+        try:
+            save_report_to_sheets(report)
+            st.success("✅ Report submitted successfully and saved to Google Sheets!")
+        except Exception as e:
+            st.error(f"❗ Failed to save report to Google Sheets: {e}")
 
-    # Fetch all data from Google Sheet
-    data = sheet.get_all_records()
-
-    if not data:
-        st.info("No reports found.")
-        st.stop()
-
-    df = pd.DataFrame(data)
-    df.index += 2  # Account for Google Sheets header rows (starts at row 2)
-
-    # Display reports
-    st.dataframe(df)
-
-    # Select a report to update
-    row_to_update = st.number_input("Enter the Row Number to Update", min_value=2, max_value=sheet.row_count)
-
-    if row_to_update and row_to_update <= sheet.row_count:
-        # Fetch current values in that row
-        current_row = sheet.row_values(row_to_update)
-        if not current_row:
-            st.error("No data found in that row.")
-        else:
-            st.write(f"Current Report Data (Row {row_to_update}):")
-            report_dict = {
-                "Name": current_row[0],
-                "Contact": current_row[1],
-                "Municipality": current_row[2],
-                "Leak Type": current_row[3],
-                "Location": current_row[4],
-                "DateTime": current_row[5],
-                "Status": current_row[6] if len(current_row) > 6 else "Pending"
-            }
-            st.json(report_dict)
-
-            # Update status
-            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved", "Closed"], index=["Pending", "In Progress", "Resolved", "Closed"].index(report_dict["Status"]) if report_dict["Status"] in ["Pending", "In Progress", "Resolved", "Closed"] else 0)
-            if st.button("Update Status"):
-                try:
-                    # Update status in Google Sheet (7th column = G)
-                    sheet.update_cell(row_to_update, 7, new_status)
-                    st.success(f"Status updated to '{new_status}'.")
-
-                    # Send email notification to user
-                    contact = report_dict["Contact"]
-                    if "@" in contact:
-                        subject = "Update on Your Water Leakage Report"
-                        body = f"""Dear {report_dict['Name']},
-
-Your water leakage report submitted on {report_dict['DateTime']} has been updated.
-
-New Status: {new_status}
-
-Thank you for helping keep our community safe.
-
-Best regards,
-Water Leakage Reporting Team
-"""
-                        send_email(contact, subject, body)
-
-                except Exception as e:
-                    st.error(f"Failed to update status: {e}")
+        # Show report summary
+        with st.expander("📋 View Report Summary"):
+            st.json(report)
