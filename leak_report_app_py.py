@@ -13,9 +13,16 @@ from datetime import datetime
 import os
 import geocoder
 
-# Get location automatically (based on IP)
+# Detect location using IP
 g = geocoder.ip('me')
-auto_location = g.city + ", " + g.country if g.ok else "Location unavailable"
+if g.ok:
+    detected_loc = f"{g.city}, {g.country}" if g.city else g.country
+else:
+    detected_loc = ""
+
+# Show detected location as default value, but allow editing
+location = st.text_input("Location of Leak", value=detected_loc)
+
 
 # Leak type options
 leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
