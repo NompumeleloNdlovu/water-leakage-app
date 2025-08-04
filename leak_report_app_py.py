@@ -15,15 +15,25 @@ import geocoder
 import smtplib
 from email.message import EmailMessage
 
+# Municipality email addresses for sending reports
+municipality_emails = {
+    "City of Johannesburg": "nompi1369@icloud.com",
+    "City of Cape Town": "nompi1369@icloud.com",
+    "eThekwini": "nompi1369@icloud.com",
+    "Buffalo City": "nompi1369@icloud.com",
+    "Mangaung": "nompi1369@icloud.com",
+    "Nelson Mandela Bay": "nompi1369@icloud.com",
+    "Other": "nompi1369@icloud.com"
+}
 
 def send_email_to_municipality(to_email, report):
     # Mailtrap SMTP credentials
     smtp_server = "sandbox.smtp.mailtrap.io"
     smtp_port = 2525  # or 465 if you want SSL
-    smtp_user = "57ce8f34059f69"
-    smtp_password = "ca2168fedda898"
+    smtp_user = "57ce8f34059f69"       # Replace with your Mailtrap username
+    smtp_password = "ca2168fedda898"   # Replace with your Mailtrap password
 
-    sender_email = "your_email@example.com"  # Can be any email you want shown as sender
+    sender_email = "your_email@example.com"  # Sender email shown in mail (can be anything)
 
     msg = EmailMessage()
     msg['Subject'] = "🚰 New Water Leakage Report Submitted"
@@ -49,7 +59,6 @@ DateTime: {report['DateTime']}
         print(f"Error sending email: {e}")
         return False
 
-
 # Detect location using IP
 g = geocoder.ip('me')
 if g.ok:
@@ -57,14 +66,10 @@ if g.ok:
 else:
     detected_loc = ""
 
-# Show detected location as default value, but allow editing
-location = st.text_input("Location of Leak", value=detected_loc)
-
-
 # Leak type options
 leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
 
-# Example municipalities (can be expanded)
+# Municipalities list
 municipalities = [
     "City of Johannesburg",
     "City of Cape Town",
@@ -75,7 +80,7 @@ municipalities = [
     "Other"
 ]
 
-# App UI
+# Streamlit UI
 st.title("🚰 Water Leakage Reporting App")
 st.markdown("Help your community by reporting water leaks. Fill in the details below:")
 
@@ -84,10 +89,10 @@ name = st.text_input("Full Name")
 contact = st.text_input("Contact Information (Phone/Email)")
 municipality = st.selectbox("Select Your Municipality", municipalities)
 description = st.selectbox("Type of Leak", leak_types)
-location = st.text_input("Detected Location", value=auto_location, disabled=True)
+location = st.text_input("Detected Location", value=detected_loc, disabled=True)
 image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-# Submit
+# Submit button logic
 if st.button("Submit Report"):
     if not name or not contact or not municipality or not description:
         st.error("❗ Please complete all required fields.")
@@ -97,24 +102,29 @@ if st.button("Submit Report"):
             "Contact": contact,
             "Municipality": municipality,
             "Leak Type": description,
-            "Location": auto_location,
+            "Location": location,
             "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
+        # Append report to CSV file
         df = pd.DataFrame([report])
         file_exists = os.path.isfile("leak_reports.csv")
         df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
 
-        # Save image
+        # Save uploaded image if any
         if image:
-            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
             os.makedirs("leak_images", exist_ok=True)
+            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
             with open(image_path, "wb") as f:
                 f.write(image.read())
 
-        # Simulate routing the report to the selected municipality (future: send email/API call)
-        st.success(f"✅ Report submitted and routed to **{municipality}** for review.")
+        # Send email notification to municipality via Mailtrap SMTP
+        to_email = municipality_emails.get(municipality, "general@municipality.gov.za")
+        if send_email_to_municipality(to_email, report):
+            st.success(f"✅ Report submitted and email sent to **{municipality}**.")
+        else:
+            st.warning("⚠️ Report submitted but failed to send email notification.")
 
-        # Optionally: Display summary
+        # Display report summary
         with st.expander("📋 View Report Summary"):
             st.json(report)
