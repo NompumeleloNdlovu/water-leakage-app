@@ -19,7 +19,7 @@ smtp_server = "sandbox.smtp.mailtrap.io"
 smtp_port = 2525
 smtp_user = "57ce8f34059f69"
 smtp_password = "ca2168fedda898"
-sender_email = "your_email@example.com"  # Replace if needed
+sender_email = "your_email@example.com"  # Replace with your desired sender email
 
 # ----------------- Helper: Send to municipality -----------------
 def send_email_to_municipality(to_email, report):
@@ -77,12 +77,28 @@ municipality_emails = {
 }
 
 # ----------------- Streamlit App -----------------
+st.set_page_config(page_title="Water Leak Reporter", page_icon="🚰")
+
 st.title("🚰 Water Leakage Reporting App")
 st.markdown("Help your community by reporting water leaks. Choose a tab below:")
 
-tab1, tab2, tab3 = st.tabs(["📤 Submit Report", "🔍 Track Status", "🛠️ Admin: Update Status"])
+# ----------------- Admin Access -----------------
+with st.sidebar:
+    st.subheader("🔐 Admin Access")
+    admin_input = st.text_input("Enter Admin Code", type="password")
+    is_admin = admin_input == "letmein"
+    if is_admin:
+        st.success("✅ Admin mode enabled")
+    elif admin_input:
+        st.error("❌ Incorrect admin code")
 
-# ----------------- Tab 1: Submit -----------------
+# ----------------- Tabs -----------------
+if is_admin:
+    tab1, tab2, tab3 = st.tabs(["📤 Submit Report", "🔍 Track Status", "🛠️ Admin: Update Status"])
+else:
+    tab1, tab2 = st.tabs(["📤 Submit Report", "🔍 Track Status"])
+
+# ----------------- Tab 1: Submit Report -----------------
 with tab1:
     name = st.text_input("Full Name")
     contact = st.text_input("Contact Email")
@@ -117,9 +133,10 @@ with tab1:
                 with open(img_path, "wb") as f:
                     f.write(image.read())
 
-            # Send email to municipality
             to_email = municipality_emails[municipality]
-            if send_email_to_municipality(to_email, report):
+            email_sent = send_email_to_municipality(to_email, report)
+
+            if email_sent:
                 st.success(f"✅ Report submitted! Your reference number is **{report_id}**")
             else:
                 st.warning("⚠️ Report saved but email failed to send.")
@@ -127,7 +144,7 @@ with tab1:
             with st.expander("📋 View Report Summary"):
                 st.json(report)
 
-# ----------------- Tab 2: Track -----------------
+# ----------------- Tab 2: Track Status -----------------
 with tab2:
     st.markdown("🔎 _Enter your report reference number to check the status._")
     search_id = st.text_input("Enter Report ID (e.g., LEAK-202408041235)")
@@ -144,11 +161,10 @@ with tab2:
             st.warning("📁 No reports have been submitted yet.")
 
 # ----------------- Tab 3: Admin Update -----------------
-with tab3:
-    st.warning("⚠️ Admin Panel — Update the status of submitted reports")
+if is_admin:
+    with tab3:
+        st.warning("⚠️ Admin Panel — Update the status of submitted reports")
 
-    admin_code = st.text_input("Enter Admin Code", type="password")
-    if admin_code == "letmein":  # You can replace with a secure method
         report_id = st.text_input("Enter Report ID to Update")
         new_status = st.selectbox("New Status", ["Pending", "In Progress", "Resolved", "Dismissed"])
 
@@ -160,7 +176,6 @@ with tab3:
                     df.to_csv("leak_reports.csv", index=False)
                     st.success(f"✅ Status updated for {report_id} to '{new_status}'")
 
-                    # Email to user
                     user_row = df[df["ReportID"] == report_id].iloc[0]
                     user_contact = user_row["Contact"]
                     if "@" in user_contact and "." in user_contact:
@@ -189,7 +204,3 @@ Water Reporting Team
                     st.error("❌ Report ID not found.")
             else:
                 st.warning("📁 No report file found.")
-    elif admin_code:
-        st.error("❌ Incorrect admin code.")
-
-
