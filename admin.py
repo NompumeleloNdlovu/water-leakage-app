@@ -7,69 +7,126 @@ Original file is located at
     https://colab.research.google.com/drive/1S9lELbDuvcsZLsJ_P91yXmGgGXQLJ8-l
 """
 import streamlit as st
+import pandas as pd
+import json
 import gspread
 from google.oauth2.service_account import Credentials
+import smtplib
+from email.message import EmailMessage
 
-# Google Sheets setup
-SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDS_FILE = "waterleakagereport-a7293c7d9ebe.json"  # Replace with your JSON key path
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  # Replace with your Google Sheet ID
+# --- Load Google Service Account credentials ---
+json_key_str = st.secrets["google_service_account"]["json_key"]
+service_account_info = json.loads(json_key_str)
 
-ADMIN_CODE = "admin1234"  # Change this to your preferred admin password
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+client = gspread.authorize(creds)
+
+# Your Google Sheet ID here
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
 @st.cache_resource
 def get_sheet():
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPE)
-    client = gspread.authorize(creds)
-    spreadsheet = client.open_by_key(SPREADSHEET_ID)
-    return spreadsheet.sheet1
+    return client.open_by_key(SPREADSHEET_ID).sheet1
 
 sheet = get_sheet()
 
-def get_all_reports():
-    return sheet.get_all_records()
+# Email sending function
+def send_email(to_email, subject, body):
+    smtp_server = "sandbox.smtp.mailtrap.io"
+    smtp_port = 2525
+    smtp_user = st.secrets["mailtrap"]["user"]
+    smtp_password = st.secrets["mailtrap"]["password"]
 
-def update_status(report_id, new_status):
-    records = sheet.get_all_records()
-    for i, row in enumerate(records, start=2):  # Header is row 1
-        if row["ReportID"] == report_id:
-            sheet.update_cell(i, 8, new_status)  # Column 8 is Status
-            return True
+    sender_email = "your_email@example.com"
+
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        st.error(f"Error sending email: {e}")
+        return False
+
+# Admin authentication (simple)
+ADMIN_CODE = st.secrets.get("admin_code", "12345")
+
+def admin_login():
+    code = st.text_input("Enter Admin Code", type="password")
+    if code == ADMIN_CODE:
+        return True
+    elif code:
+        st.error("Incorrect admin code")
     return False
 
-# --- Streamlit UI ---
-st.title("🚰 Water Leakage Reporting - Admin Panel")
+if admin_login():
+    st.title("🚰 Water Leakage Reporting - Admin Panel")
 
-code = st.text_input("Enter Admin Code", type="password")
+    # Fetch all data from Google Sheet
+    data = sheet.get_all_records()
 
-if code == ADMIN_CODE:
-    st.success("Access Granted!")
+    if not data:
+        st.info("No reports found.")
+        st.stop()
 
-    reports = get_all_reports()
-    if not reports:
-        st.info("📁 No reports found.")
-    else:
-        for report in reports:
-            with st.expander(f"Report ID: {report['ReportID']} - Status: {report['Status']}"):
-                st.write(f"**Name:** {report['Name']}")
-                st.write(f"**Contact:** {report['Contact']}")
-                st.write(f"**Municipality:** {report['Municipality']}")
-                st.write(f"**Leak Type:** {report['Leak Type']}")
-                st.write(f"**Location:** {report['Location']}")
-                st.write(f"**Date & Time:** {report['DateTime']}")
+    df = pd.DataFrame(data)
+    df.index += 2  # Account for Google Sheets header rows (starts at row 2)
 
-                new_status = st.selectbox("Update Status", 
-                    ["Pending", "In Progress", "Resolved", "Closed"], index=["Pending", "In Progress", "Resolved", "Closed"].index(report['Status']), key=report['ReportID'])
+    # Display reports
+    st.dataframe(df)
 
-                if st.button(f"Update Status for {report['ReportID']}", key=f"btn_{report['ReportID']}"):
-                    if new_status != report['Status']:
-                        success = update_status(report['ReportID'], new_status)
-                        if success:
-                            st.success(f"Status updated to '{new_status}'")
-                        else:
-                            st.error("Failed to update status. Please try again.")
-                    else:
-                        st.info("Status unchanged.")
-else:
-    if code:
-        st.error("Invalid admin code.")
+    # Select a report to update
+    row_to_update = st.number_input("Enter the Row Number to Update", min_value=2, max_value=sheet.row_count)
+
+    if row_to_update and row_to_update <= sheet.row_count:
+        # Fetch current values in that row
+        current_row = sheet.row_values(row_to_update)
+        if not current_row:
+            st.error("No data found in that row.")
+        else:
+            st.write(f"Current Report Data (Row {row_to_update}):")
+            report_dict = {
+                "Name": current_row[0],
+                "Contact": current_row[1],
+                "Municipality": current_row[2],
+                "Leak Type": current_row[3],
+                "Location": current_row[4],
+                "DateTime": current_row[5],
+                "Status": current_row[6] if len(current_row) > 6 else "Pending"
+            }
+            st.json(report_dict)
+
+            # Update status
+            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved", "Closed"], index=["Pending", "In Progress", "Resolved", "Closed"].index(report_dict["Status"]) if report_dict["Status"] in ["Pending", "In Progress", "Resolved", "Closed"] else 0)
+            if st.button("Update Status"):
+                try:
+                    # Update status in Google Sheet (7th column = G)
+                    sheet.update_cell(row_to_update, 7, new_status)
+                    st.success(f"Status updated to '{new_status}'.")
+
+                    # Send email notification to user
+                    contact = report_dict["Contact"]
+                    if "@" in contact:
+                        subject = "Update on Your Water Leakage Report"
+                        body = f"""Dear {report_dict['Name']},
+
+Your water leakage report submitted on {report_dict['DateTime']} has been updated.
+
+New Status: {new_status}
+
+Thank you for helping keep our community safe.
+
+Best regards,
+Water Leakage Reporting Team
+"""
+                        send_email(contact, subject, body)
+
+                except Exception as e:
+                    st.error(f"Failed to update status: {e}")
