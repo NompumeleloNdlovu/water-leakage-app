@@ -14,58 +14,14 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-# ----------------- Email config -----------------
+# --- Email config (Mailtrap) ---
 smtp_server = "sandbox.smtp.mailtrap.io"
 smtp_port = 2525
 smtp_user = "57ce8f34059f69"
 smtp_password = "ca2168fedda898"
-sender_email = "your_email@example.com"  # Replace with your desired sender email
+sender_email = "your_email@example.com"  # Replace with your sender email
 
-# ----------------- Helper: Send to municipality -----------------
-def send_email_to_municipality(to_email, report):
-    msg = EmailMessage()
-    msg['Subject'] = f"🚰 New Water Leakage Report: {report['ReportID']}"
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(f"""
-A new water leakage report has been submitted:
-
-Report ID: {report['ReportID']}
-Name: {report['Name']}
-Contact: {report['Contact']}
-Municipality: {report['Municipality']}
-Leak Type: {report['Leak Type']}
-Location: {report['Location']}
-DateTime: {report['DateTime']}
-Status: {report['Status']}
-""")
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
-
-# ----------------- Helper: Email to user -----------------
-def send_custom_email(to_email, subject, content):
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(content)
-
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
-
-# ----------------- Municipality Email Map -----------------
+# Municipality emails (all to same placeholder)
 municipality_emails = {
     "City of Johannesburg": "nompi1369@icloud.com",
     "City of Cape Town": "nompi1369@icloud.com",
@@ -76,131 +32,130 @@ municipality_emails = {
     "Other": "nompi1369@icloud.com"
 }
 
-# ----------------- Streamlit App -----------------
-st.set_page_config(page_title="Water Leak Reporter", page_icon="🚰")
+# Send email helpers
+def send_email(to_email, subject, content):
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(content)
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
 
-st.title("🚰 Water Leakage Reporting App")
-st.markdown("Help your community by reporting water leaks. Choose a tab below:")
+def send_email_to_municipality(to_email, report):
+    subject = f"🚰 New Water Leakage Report: {report['ReportID']}"
+    content = f"""
+A new water leakage report has been submitted:
 
-# ----------------- Admin Access -----------------
-with st.sidebar:
-    st.subheader("🔐 Admin Access")
-    admin_input = st.text_input("Enter Admin Code", type="password")
-    is_admin = admin_input == "letmein"
-    if is_admin:
-        st.success("✅ Admin mode enabled")
-    elif admin_input:
-        st.error("❌ Incorrect admin code")
-
-# ----------------- Tabs -----------------
-if is_admin:
-    tab1, tab2, tab3 = st.tabs(["📤 Submit Report", "🔍 Track Status", "🛠️ Admin: Update Status"])
-else:
-    tab1, tab2 = st.tabs(["📤 Submit Report", "🔍 Track Status"])
-
-# ----------------- Tab 1: Submit Report -----------------
-with tab1:
-    name = st.text_input("Full Name")
-    contact = st.text_input("Contact Email")
-    municipality = st.selectbox("Select Your Municipality", list(municipality_emails.keys()))
-    description = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-    location = st.text_input("Location of the Leak (e.g., 123 Main St, Khayelitsha)")
-    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
-
-    if st.button("Submit Report"):
-        if not name or not contact or not location:
-            st.error("❗ Please fill in all required fields.")
-        else:
-            report_id = f"LEAK-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            report = {
-                "ReportID": report_id,
-                "Name": name,
-                "Contact": contact,
-                "Municipality": municipality,
-                "Leak Type": description,
-                "Location": location,
-                "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "Status": "Pending"
-            }
-
-            df = pd.DataFrame([report])
-            file_exists = os.path.isfile("leak_reports.csv")
-            df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
-
-            if image:
-                os.makedirs("leak_images", exist_ok=True)
-                img_path = os.path.join("leak_images", f"{report_id}_{image.name}")
-                with open(img_path, "wb") as f:
-                    f.write(image.read())
-
-            to_email = municipality_emails[municipality]
-            email_sent = send_email_to_municipality(to_email, report)
-
-            if email_sent:
-                st.success(f"✅ Report submitted! Your reference number is **{report_id}**")
-            else:
-                st.warning("⚠️ Report saved but email failed to send.")
-
-            with st.expander("📋 View Report Summary"):
-                st.json(report)
-
-# ----------------- Tab 2: Track Status -----------------
-with tab2:
-    st.markdown("🔎 _Enter your report reference number to check the status._")
-    search_id = st.text_input("Enter Report ID (e.g., LEAK-202408041235)")
-    if st.button("Check Status"):
-        if os.path.exists("leak_reports.csv"):
-            df = pd.read_csv("leak_reports.csv")
-            result = df[df["ReportID"] == search_id]
-            if not result.empty:
-                st.success("✅ Report found:")
-                st.table(result[["ReportID", "Status", "Municipality", "DateTime"]])
-            else:
-                st.error("❌ No report found with that ID.")
-        else:
-            st.warning("📁 No reports have been submitted yet.")
-
-# ----------------- Tab 3: Admin Update -----------------
-if is_admin:
-    with tab3:
-        st.warning("⚠️ Admin Panel — Update the status of submitted reports")
-
-        report_id = st.text_input("Enter Report ID to Update")
-        new_status = st.selectbox("New Status", ["Pending", "In Progress", "Resolved", "Dismissed"])
-
-        if st.button("Update Status"):
-            if os.path.exists("leak_reports.csv"):
-                df = pd.read_csv("leak_reports.csv")
-                if report_id in df["ReportID"].values:
-                    df.loc[df["ReportID"] == report_id, "Status"] = new_status
-                    df.to_csv("leak_reports.csv", index=False)
-                    st.success(f"✅ Status updated for {report_id} to '{new_status}'")
-
-                    user_row = df[df["ReportID"] == report_id].iloc[0]
-                    user_contact = user_row["Contact"]
-                    if "@" in user_contact and "." in user_contact:
-                        subject = f"🚰 Update on Your Water Leak Report ({report_id})"
-                        message = f"""
-Dear {user_row['Name']},
-
-Your water leak report has been updated.
-
-📋 Report ID: {report_id}  
-🗺️ Location: {user_row['Location']}  
-📝 Leak Type: {user_row['Leak Type']}  
-📅 Submitted: {user_row['DateTime']}  
-📌 New Status: {new_status}
-
-Thank you for contributing to water conservation in your community.
-
-Regards,  
-Water Reporting Team
+Report ID: {report['ReportID']}
+Name: {report['Name']}
+Contact: {report['Contact']}
+Municipality: {report['Municipality']}
+Leak Type: {report['Leak Type']}
+Location: {report['Location']}
+DateTime: {report['DateTime']}
+Status: {report['Status']}
 """
-                        send_custom_email(user_contact, subject, message)
-                        st.info(f"📨 Email notification sent to {user_contact}")
-                    else:
-                        st.warning("⚠️ Contact is not a valid email. Notification skipped.")
-                else:
-                    st.error("❌ Report ID not found.")
-            else:
-                st.warning("📁 No report file found.")
+    return send_email(to_email, subject, content)
+
+def send_receipt_to_user(to_email, report):
+    subject = f"✅ Water Leak Report Received - Reference {report['ReportID']}"
+    content = f"""
+Hi {report['Name']},
+
+Thank you for reporting a water leakage.
+
+We have received your report and forwarded it to your municipality (**{report['Municipality']}**).
+
+🧾 Your Report Details:
+- Report ID: {report['ReportID']}
+- Date/Time: {report['DateTime']}
+- Leak Type: {report['Leak Type']}
+- Location: {report['Location']}
+- Status: {report['Status']}
+
+Thank you for helping to conserve water and maintain infrastructure.
+
+💧 Water Reporting Team
+"""
+    return send_email(to_email, subject, content)
+
+# Streamlit UI
+st.set_page_config(page_title="Water Leakage Reporting - User", page_icon="🚰")
+st.title("🚰 Water Leakage Reporting App")
+st.markdown("Help your community by reporting water leaks. Fill the form below:")
+
+# Input fields
+name = st.text_input("Full Name")
+contact = st.text_input("Contact Email")
+municipality = st.selectbox("Select Your Municipality", list(municipality_emails.keys()))
+leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+location = st.text_input("Location of the Leak (address or description)")
+image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+
+if st.button("Submit Report"):
+    if not name or not contact or not location:
+        st.error("❗ Please fill in all required fields.")
+    else:
+        report_id = f"LEAK-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        report = {
+            "ReportID": report_id,
+            "Name": name,
+            "Contact": contact,
+            "Municipality": municipality,
+            "Leak Type": leak_type,
+            "Location": location,
+            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Status": "Pending"
+        }
+
+        # Save report to CSV
+        df = pd.DataFrame([report])
+        file_exists = os.path.isfile("leak_reports.csv")
+        df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
+
+        # Save image if uploaded
+        if image:
+            os.makedirs("leak_images", exist_ok=True)
+            image_path = os.path.join("leak_images", f"{report_id}_{image.name}")
+            with open(image_path, "wb") as f:
+                f.write(image.read())
+
+        # Send emails
+        municipality_email = municipality_emails[municipality]
+        muni_email_sent = send_email_to_municipality(municipality_email, report)
+        user_receipt_sent = send_receipt_to_user(contact, report)
+
+        if muni_email_sent:
+            st.success(f"✅ Report submitted! Your reference number is **{report_id}**")
+        else:
+            st.warning("⚠️ Report saved but failed to send email to municipality.")
+
+        if user_receipt_sent:
+            st.success("📨 Confirmation email sent to your address.")
+        else:
+            st.warning("⚠️ Could not send confirmation email to you.")
+
+        with st.expander("📋 View Report Summary"):
+            st.json(report)
+
+st.markdown("---")
+st.subheader("🔎 Track Your Report Status")
+search_id = st.text_input("Enter your Report ID")
+
+if st.button("Check Status"):
+    if os.path.exists("leak_reports.csv"):
+        df = pd.read_csv("leak_reports.csv")
+        report = df[df["ReportID"] == search_id]
+        if not report.empty:
+            st.table(report[["ReportID", "Status", "Municipality", "DateTime"]])
+        else:
+            st.error("❌ No report found with that ID.")
+    else:
+        st.warning("📁 No reports found yet.")
