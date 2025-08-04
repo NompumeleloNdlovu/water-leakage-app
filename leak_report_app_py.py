@@ -12,6 +12,43 @@ import pandas as pd
 from datetime import datetime
 import os
 import geocoder
+import smtplib
+from email.message import EmailMessage
+
+
+def send_email_to_municipality(to_email, report):
+    # Mailtrap SMTP credentials
+    smtp_server = "sandbox.smtp.mailtrap.io"
+    smtp_port = 2525  # or 465 if you want SSL
+    smtp_user = "57ce8f34059f69"
+    smtp_password = "ca2168fedda898"
+
+    sender_email = "your_email@example.com"  # Can be any email you want shown as sender
+
+    msg = EmailMessage()
+    msg['Subject'] = "🚰 New Water Leakage Report Submitted"
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(f"""
+A new water leakage report has been submitted:
+
+Name: {report['Name']}
+Contact: {report['Contact']}
+Municipality: {report['Municipality']}
+Leak Type: {report['Leak Type']}
+Location: {report['Location']}
+DateTime: {report['DateTime']}
+""")
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
 
 # Detect location using IP
 g = geocoder.ip('me')
