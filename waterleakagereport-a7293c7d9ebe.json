@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "waterleakagereport",
+  "private_key_id": "a7293c7d9ebe15648fd86e548d41f8b4c8e59882",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLRT1PvZJE19Mx\nrgmfpy0WnM524kkia4AQj7FdaZTYrOUft/S3m+hgpPZIozN/rLDW0E49HkPZTxb5\n/WBB3tbSWROGdg4UOgoxubINsxZp8X14hd4Fd12UZtBuwT6a7aDAkpIzIsZwgj5r\n7o7zk+oEKeBWCO2LYrAqIMA9QU8/Y/DdasFn6smINyE6Bs5j24G93deIdM+rAGIB\n2B7ZJEbcpzd7nTfdyKi6/kGG1qqtLzFLoWnEFlfdCnP2/rBDrcaW7six7PWPIMld\nCMTe2d465ORXl35Jj4UtNkaphxbIbpdlXc+zSxytMnMrHZDecwv4OqzMGQeAUA9M\nivtXoSyRAgMBAAECggEAKwGWd/tGCdo25PUrNJPYcocRGK6GJinj4b0hG8AlnZUw\n8d3IARvTlbT5JYOf9vSIwp42W3B+jujQleohdjZJMZ5mhuWN04I3G2+sKAFareYJ\ns5jxESuAyU/abABnODyr7Opl07tZDD9GKSxDIu5JzgE1JUbEyV+DIZqlyZ/6fhDM\nJI1C9KqRHUzGWaLilOsBcfwZ/vqtRMiN9d0hCxWWqcRJthRWArkTQjDRrt4uflZ9\niw3+S++tjrFLFvrHhGAZudtr81OY100byl21iBtXmcjKQd6ZB9KH/cD125/w/QSo\n/W4nhPwYwi8LUtVd1lgo1FznNpuGCypEXuvRGa/2xQKBgQD/fhYQFKb8zR/pHpPq\nnNCnbFUvlqczDExbwYO9DclNPrcOsNv56cPltUH5NrCfGCu9Ko0dn5dx6DIWNKfD\n22QWVKMm/Mk1v2OXUdohNQzv68XwXeRduACOGwf9AK7oJ0F9tByVO/PzApOCxNCF\npaDOpeoTe/QS380x0FCUpdVqRQKBgQDLrJloA/1tqMhFBzbApYH+2hMELHveM0yk\nbrc0pPR71TURP/SgdvuLa+guFVHMx9isSZha5UZqi2StkZA31FpSU2q7KvHspnGC\npLDYXl5eEQFF++if+hkbX24NKizYfNtwfk8LSDLDeE3jLYwrYoKdnRgM99w8uabY\nBE3vMbkj3QKBgQDplU/8gbUt2Se8jQ006QvGlb/IE1dnz22cUe7skEcjjRv1nXJw\nKO3F/JKFkx+lRIbwmo+LrtXZ+SyZqqha4yC9XcIQKfqXXhRiSx4/T+41B3zfRig8\nGra/NS13fQFsFD/G+j1LnxVobkmIvAHcvlGnvH6mM6QxAVXrngWd8YONdQKBgEmV\n/H7mIiQCfQjjiFal9YecRo6Ve9NV+XTXQ33TszkiWN/4mWt4UX2X6PTtYvZ3pcLp\nfBArEfvgjOlg1Bg3ssJXvRIOfAWiRRSMaBBkV/focOtWDj/uXi/TlLFQ8Y7t3WKR\nYAGVfjG9P3a6uA/csZA8d7oHuxx9fthBBd9LubZJAoGBALaO0uX+/rqK7WVO8BfB\ntkgT1TkzmxidITZ31K45LMwWyHXg2XssqgE/oY7H6Ayid+RvG8yujRlDyIJAmPzt\nTxw8HMg9y9tXE9j7BCG/TtA/u05TUFWX827nLLPpu8MAKXFbK1qUS7XVvdyGcQwk\neJV6vw/az813l01kNu+c+fkS\n-----END PRIVATE KEY-----\n",
+  "client_email": "waterleakage@waterleakagereport.iam.gserviceaccount.com",
+  "client_id": "110122589433714249827",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/waterleakage%40waterleakagereport.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
