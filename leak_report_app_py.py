@@ -11,11 +11,61 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-import geocoder
 import smtplib
 from email.message import EmailMessage
 
-# Municipality email addresses for sending reports
+# ----------------- Email config -----------------
+smtp_server = "sandbox.smtp.mailtrap.io"
+smtp_port = 2525
+smtp_user = "57ce8f34059f69"
+smtp_password = "ca2168fedda898"
+sender_email = "your_email@example.com"  # Replace if needed
+
+# ----------------- Helper: Send to municipality -----------------
+def send_email_to_municipality(to_email, report):
+    msg = EmailMessage()
+    msg['Subject'] = f"🚰 New Water Leakage Report: {report['ReportID']}"
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(f"""
+A new water leakage report has been submitted:
+
+Report ID: {report['ReportID']}
+Name: {report['Name']}
+Contact: {report['Contact']}
+Municipality: {report['Municipality']}
+Leak Type: {report['Leak Type']}
+Location: {report['Location']}
+DateTime: {report['DateTime']}
+Status: {report['Status']}
+""")
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+# ----------------- Helper: Email to user -----------------
+def send_custom_email(to_email, subject, content):
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg.set_content(content)
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+# ----------------- Municipality Email Map -----------------
 municipality_emails = {
     "City of Johannesburg": "nompi1369@icloud.com",
     "City of Cape Town": "nompi1369@icloud.com",
@@ -26,105 +76,120 @@ municipality_emails = {
     "Other": "nompi1369@icloud.com"
 }
 
-def send_email_to_municipality(to_email, report):
-    # Mailtrap SMTP credentials
-    smtp_server = "sandbox.smtp.mailtrap.io"
-    smtp_port = 2525  # or 465 if you want SSL
-    smtp_user = "57ce8f34059f69"       # Replace with your Mailtrap username
-    smtp_password = "ca2168fedda898"   # Replace with your Mailtrap password
-
-    sender_email = "your_email@example.com"  # Sender email shown in mail (can be anything)
-
-    msg = EmailMessage()
-    msg['Subject'] = "🚰 New Water Leakage Report Submitted"
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg.set_content(f"""
-A new water leakage report has been submitted:
-
-Name: {report['Name']}
-Contact: {report['Contact']}
-Municipality: {report['Municipality']}
-Leak Type: {report['Leak Type']}
-Location: {report['Location']}
-DateTime: {report['DateTime']}
-""")
-
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
-
-# Detect location using IP
-g = geocoder.ip('me')
-if g.ok:
-    detected_loc = f"{g.city}, {g.country}" if g.city else g.country
-else:
-    detected_loc = ""
-
-# Leak type options
-leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-
-# Municipalities list
-municipalities = [
-    "City of Johannesburg",
-    "City of Cape Town",
-    "eThekwini",
-    "Buffalo City",
-    "Mangaung",
-    "Nelson Mandela Bay",
-    "Other"
-]
-
-# Streamlit UI
+# ----------------- Streamlit App -----------------
 st.title("🚰 Water Leakage Reporting App")
-st.markdown("Help your community by reporting water leaks. Fill in the details below:")
+st.markdown("Help your community by reporting water leaks. Choose a tab below:")
 
-# Input fields
-name = st.text_input("Full Name")
-contact = st.text_input("Contact Information (Phone/Email)")
-municipality = st.selectbox("Select Your Municipality", municipalities)
-description = st.selectbox("Type of Leak", leak_types)
-location = st.text_input("Detected Location", value=detected_loc, disabled=True)
-image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+tab1, tab2, tab3 = st.tabs(["📤 Submit Report", "🔍 Track Status", "🛠️ Admin: Update Status"])
 
-# Submit button logic
-if st.button("Submit Report"):
-    if not name or not contact or not municipality or not description:
-        st.error("❗ Please complete all required fields.")
-    else:
-        report = {
-            "Name": name,
-            "Contact": contact,
-            "Municipality": municipality,
-            "Leak Type": description,
-            "Location": location,
-            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+# ----------------- Tab 1: Submit -----------------
+with tab1:
+    name = st.text_input("Full Name")
+    contact = st.text_input("Contact Email")
+    municipality = st.selectbox("Select Your Municipality", list(municipality_emails.keys()))
+    description = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+    location = st.text_input("Location of the Leak (e.g., 123 Main St, Khayelitsha)")
+    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-        # Append report to CSV file
-        df = pd.DataFrame([report])
-        file_exists = os.path.isfile("leak_reports.csv")
-        df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
-
-        # Save uploaded image if any
-        if image:
-            os.makedirs("leak_images", exist_ok=True)
-            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
-            with open(image_path, "wb") as f:
-                f.write(image.read())
-
-        # Send email notification to municipality via Mailtrap SMTP
-        to_email = municipality_emails.get(municipality, "general@municipality.gov.za")
-        if send_email_to_municipality(to_email, report):
-            st.success(f"✅ Report submitted and email sent to **{municipality}**.")
+    if st.button("Submit Report"):
+        if not name or not contact or not location:
+            st.error("❗ Please fill in all required fields.")
         else:
-            st.warning("⚠️ Report submitted but failed to send email notification.")
+            report_id = f"LEAK-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            report = {
+                "ReportID": report_id,
+                "Name": name,
+                "Contact": contact,
+                "Municipality": municipality,
+                "Leak Type": description,
+                "Location": location,
+                "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Status": "Pending"
+            }
 
-        # Display report summary
-        with st.expander("📋 View Report Summary"):
-            st.json(report)
+            df = pd.DataFrame([report])
+            file_exists = os.path.isfile("leak_reports.csv")
+            df.to_csv("leak_reports.csv", mode="a", index=False, header=not file_exists)
+
+            if image:
+                os.makedirs("leak_images", exist_ok=True)
+                img_path = os.path.join("leak_images", f"{report_id}_{image.name}")
+                with open(img_path, "wb") as f:
+                    f.write(image.read())
+
+            # Send email to municipality
+            to_email = municipality_emails[municipality]
+            if send_email_to_municipality(to_email, report):
+                st.success(f"✅ Report submitted! Your reference number is **{report_id}**")
+            else:
+                st.warning("⚠️ Report saved but email failed to send.")
+
+            with st.expander("📋 View Report Summary"):
+                st.json(report)
+
+# ----------------- Tab 2: Track -----------------
+with tab2:
+    st.markdown("🔎 _Enter your report reference number to check the status._")
+    search_id = st.text_input("Enter Report ID (e.g., LEAK-202408041235)")
+    if st.button("Check Status"):
+        if os.path.exists("leak_reports.csv"):
+            df = pd.read_csv("leak_reports.csv")
+            result = df[df["ReportID"] == search_id]
+            if not result.empty:
+                st.success("✅ Report found:")
+                st.table(result[["ReportID", "Status", "Municipality", "DateTime"]])
+            else:
+                st.error("❌ No report found with that ID.")
+        else:
+            st.warning("📁 No reports have been submitted yet.")
+
+# ----------------- Tab 3: Admin Update -----------------
+with tab3:
+    st.warning("⚠️ Admin Panel — Update the status of submitted reports")
+
+    admin_code = st.text_input("Enter Admin Code", type="password")
+    if admin_code == "letmein":  # You can replace with a secure method
+        report_id = st.text_input("Enter Report ID to Update")
+        new_status = st.selectbox("New Status", ["Pending", "In Progress", "Resolved", "Dismissed"])
+
+        if st.button("Update Status"):
+            if os.path.exists("leak_reports.csv"):
+                df = pd.read_csv("leak_reports.csv")
+                if report_id in df["ReportID"].values:
+                    df.loc[df["ReportID"] == report_id, "Status"] = new_status
+                    df.to_csv("leak_reports.csv", index=False)
+                    st.success(f"✅ Status updated for {report_id} to '{new_status}'")
+
+                    # Email to user
+                    user_row = df[df["ReportID"] == report_id].iloc[0]
+                    user_contact = user_row["Contact"]
+                    if "@" in user_contact and "." in user_contact:
+                        subject = f"🚰 Update on Your Water Leak Report ({report_id})"
+                        message = f"""
+Dear {user_row['Name']},
+
+Your water leak report has been updated.
+
+📋 Report ID: {report_id}  
+🗺️ Location: {user_row['Location']}  
+📝 Leak Type: {user_row['Leak Type']}  
+📅 Submitted: {user_row['DateTime']}  
+📌 New Status: {new_status}
+
+Thank you for contributing to water conservation in your community.
+
+Regards,  
+Water Reporting Team
+"""
+                        send_custom_email(user_contact, subject, message)
+                        st.info(f"📨 Email notification sent to {user_contact}")
+                    else:
+                        st.warning("⚠️ Contact is not a valid email. Notification skipped.")
+                else:
+                    st.error("❌ Report ID not found.")
+            else:
+                st.warning("📁 No report file found.")
+    elif admin_code:
+        st.error("❌ Incorrect admin code.")
+
+
