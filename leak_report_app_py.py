@@ -79,8 +79,8 @@ tabs = st.tabs(["📤 Submit Report", "📄 Check Status"])
 
 with tabs[0]:
     st.subheader("Report a Leak")
-st.markdown("👥 **Help your community by reporting water leaks accurately and promptly.**")
-st.markdown("Fill in the details below:")
+    st.markdown("👥 **Help your community by reporting water leaks accurately and promptly.**")
+    st.markdown("Fill in the details below:")
 
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
