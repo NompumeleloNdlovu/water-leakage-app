@@ -10,96 +10,140 @@ Original file is located at
 import streamlit as st
 import os
 import re
-from datetime import datetime
 import gspread
+import uuid
+from datetime import datetime
 from google.oauth2.service_account import Credentials
+from email.message import EmailMessage
+import smtplib
 
-# --- Google Sheets setup ---
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  # Replace with your Google Sheets ID
+# --- Google Sheets Setup ---
+SPREADSHEET_ID = "your_google_sheet_id_here"
 
-def save_report_to_sheets(report):
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+def get_gsheet_client():
     creds = Credentials.from_service_account_info(
         st.secrets["google_service_account"],
-        scopes=scopes
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+    return gspread.authorize(creds)
 
-    # Append the report as a new row (ensure order matches your sheet headers)
+def save_report_to_sheet(report):
+    client = get_gsheet_client()
+    sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     row = [
+        report["Reference"],
         report["Name"],
         report["Contact"],
         report["Municipality"],
         report["Leak Type"],
         report["Location"],
-        report["DateTime"]
+        report["DateTime"],
+        report["Status"]
     ]
     sheet.append_row(row)
 
-# --- Helper functions ---
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(pattern, email) is not None
 
-# --- Streamlit UI ---
-st.title("🚰 Water Leakage Reporting App")
-st.markdown("Help your community by reporting water leaks. Fill in the details below:")
+def send_reference_email(to_email, ref_code, name):
+    smtp_server = "sandbox.smtp.mailtrap.io"
+    smtp_port = 2525
+    smtp_user = st.secrets["mailtrap_user"]
+    smtp_password = st.secrets["mailtrap_pass"]
+    
+    sender_email = "leak-reporter@municipality.org"
+    subject = "Your Water Leak Report - Reference Code"
+    
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to_email
+    msg.set_content(
+        f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\n\nUse this code in the app to check the status.\n\nRegards,\nMunicipal Water Department"
+    )
+    
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        st.error(f"Email failed: {e}")
+        return False
 
-# Inputs
-name = st.text_input("Full Name")
-contact = st.text_input("Contact Information (Phone/Email)", placeholder="example@email.com")
-location = st.text_input("Location of Leak", placeholder="e.g., 123 Main St, Springfield")
+# --- UI ---
+st.title("🚰 Water Leakage Reporting")
 
-leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-description = st.selectbox("Type of Leak", leak_types)
+tabs = st.tabs(["📤 Submit Report", "📄 Check Status"])
 
-municipalities = [
-    "City of Johannesburg",
-    "City of Cape Town",
-    "eThekwini",
-    "Buffalo City",
-    "Mangaung",
-    "Nelson Mandela Bay",
-    "Other"
-]
-municipality = st.selectbox("Select Your Municipality", municipalities)
+with tabs[0]:
+    st.subheader("Report a Leak")
+    
+    name = st.text_input("Full Name")
+    contact = st.text_input("Email Address", placeholder="example@email.com")
+    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+    leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
+    description = st.selectbox("Type of Leak", leak_types)
 
-# Image uploader (optional)
-image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+    municipalities = [
+        "City of Johannesburg", "City of Cape Town", "eThekwini",
+        "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+    ]
+    municipality = st.selectbox("Select Municipality", municipalities)
 
-# Submission
-if st.button("Submit Report"):
-    if not name or not contact or not location or not description or not municipality:
-        st.error("❗ Please complete all required fields.")
-    elif '@' in contact and not is_valid_email(contact):
-        st.error("❗ Please enter a valid email address.")
-    else:
-        # Save uploaded image if any
-        if image:
-            os.makedirs("leak_images", exist_ok=True)
-            image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
-            with open(image_path, "wb") as f:
-                f.write(image.read())
-            st.success(f"Image saved as {image_path}")
+    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-        # Create report dict
-        report = {
-            "Name": name,
-            "Contact": contact,
-            "Municipality": municipality,
-            "Leak Type": description,
-            "Location": location,
-            "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
+    if st.button("Submit Report"):
+        if not name or not contact or not location:
+            st.error("❗ All fields are required.")
+        elif not is_valid_email(contact):
+            st.error("❗ Please enter a valid email.")
+        else:
+            # Save image locally (optional)
+            if image:
+                os.makedirs("leak_images", exist_ok=True)
+                image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
+                with open(image_path, "wb") as f:
+                    f.write(image.read())
+                st.success(f"Image uploaded successfully: {image_path}")
 
-        # Save report to Google Sheets
+            # Generate reference
+            ref_code = str(uuid.uuid4())[:8].upper()
+
+            report = {
+                "Reference": ref_code,
+                "Name": name,
+                "Contact": contact,
+                "Municipality": municipality,
+                "Leak Type": description,
+                "Location": location,
+                "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Status": "Pending"
+            }
+
+            try:
+                save_report_to_sheet(report)
+                send_reference_email(contact, ref_code, name)
+                st.success(f"✅ Report submitted. Reference: **{ref_code}**\n\nCheck your email for confirmation.")
+            except Exception as e:
+                st.error(f"Failed to save report: {e}")
+
+with tabs[1]:
+    st.subheader("Check Report Status")
+    user_ref = st.text_input("Enter Your Reference Code")
+
+    if st.button("Check Status"):
         try:
-            save_report_to_sheets(report)
-            st.success("✅ Report submitted successfully and saved to Google Sheets!")
-        except Exception as e:
-            st.error(f"❗ Failed to save report to Google Sheets: {e}")
+            client = get_gsheet_client()
+            sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+            records = sheet.get_all_records()
+            match = next((row for row in records if row["Reference"] == user_ref), None)
 
-        # Show report summary
-        with st.expander("📋 View Report Summary"):
-            st.json(report)
+            if match:
+                st.info(f"ℹ️ Status for **{user_ref}**: {match['Status']}")
+                st.write(match)
+            else:
+                st.warning("Reference code not found.")
+        except Exception as e:
+            st.error(f"Could not check status: {e}")
