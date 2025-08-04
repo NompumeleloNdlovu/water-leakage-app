@@ -14,7 +14,7 @@ from datetime import datetime
 
 # Google Sheets setup
 SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDS_FILE = "path/to/your/service_account_key.json"  # Replace with your JSON key path
+CREDS_FILE = "waterleakagereport-a7293c7d9ebe.json"  # Replace with your JSON key path
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"  
 
 @st.cache_resource
