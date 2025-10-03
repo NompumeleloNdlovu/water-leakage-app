@@ -1,5 +1,11 @@
+plotly
+pandas
+gspread
+google-auth
+streamlit
 streamlit
 pandas
 geocoder
 gspread
 google-auth
+
