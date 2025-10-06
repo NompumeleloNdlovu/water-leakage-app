@@ -92,7 +92,7 @@ def dashboard_page(df):
     fig1.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),
+        font=dict(color="black"),  # Legend and axis text remain black
         hoverlabel=dict(
             font_color="white",  # Hover text color
             bgcolor="black"      # Hover background color
@@ -105,7 +105,7 @@ def dashboard_page(df):
     fig2.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),
+        font=dict(color="black"),  # Legend text remains black
         hoverlabel=dict(
             font_color="white",  # Hover text color
             bgcolor="black"      # Hover background color
