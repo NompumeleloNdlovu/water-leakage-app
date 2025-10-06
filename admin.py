@@ -92,10 +92,13 @@ def dashboard_page(df):
     fig1.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),  # Legend and axis text remain black
+        font=dict(color="black"),            # Axis labels and text remain black
         hoverlabel=dict(
-            font_color="white",  # Hover text color
-            bgcolor="black"      # Hover background color
+            font_color="white",              # Hover text color
+            bgcolor="black"                  # Hover background color
+        ),
+        legend=dict(
+            font=dict(color="black")         # Legend/status bar text stays black
         )
     )
     st.plotly_chart(fig1, use_container_width=True)
@@ -105,10 +108,13 @@ def dashboard_page(df):
     fig2.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),  # Legend text remains black
+        font=dict(color="black"),            # Axis labels and text remain black
         hoverlabel=dict(
-            font_color="white",  # Hover text color
-            bgcolor="black"      # Hover background color
+            font_color="white",              # Hover text color
+            bgcolor="black"                  # Hover background color
+        ),
+        legend=dict(
+            font=dict(color="black")         # Legend/status bar text stays black
         )
     )
     st.plotly_chart(fig2, use_container_width=True)
