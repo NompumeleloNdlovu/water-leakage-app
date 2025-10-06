@@ -44,7 +44,7 @@ def get_base64_of_image(image_path):
 
 # --- Display header with blue background and logo ---
 def show_header():
-    img_path = os.path.join("images", "logo.png")  # Use logo.png
+    img_path = os.path.join("images", "logo.png")  # Path to logo
     if os.path.exists(img_path):
         st.markdown(
             f"""
@@ -52,12 +52,14 @@ def show_header():
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                background-color: #007bff;  /* Solid blue header */
-                padding: 1rem 0;
+                background-color: #007bff;
+                padding: 1.5rem 0;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 border-bottom: 2px solid #0056b3;
+                width: 100%;
             ">
                 <img src="data:image/png;base64,{get_base64_of_image(img_path)}"
-                     style="height: 60px; object-fit: contain;" />
+                     style="height: 70px; object-fit: contain;" />
             </div>
             """,
             unsafe_allow_html=True
@@ -119,7 +121,6 @@ def manage_reports_page(df, sheet):
 
     for idx, report in enumerate(df.to_dict('records'), start=2):
         st.write("---")
-        # White background report details
         st.markdown(f"""
             <div style="background-color:white; padding:12px; border-radius:6px; color:black;">
                 <p><strong>Report ID:</strong> {report['ReportID']}</p>
@@ -138,7 +139,6 @@ def manage_reports_page(df, sheet):
             key=f"status_{idx}"
         )
 
-        # Update Report button
         if st.button(f"Update Report {report['ReportID']}", key=f"update_{idx}"):
             try:
                 sheet.update_cell(idx, 8, status)
@@ -218,4 +218,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
