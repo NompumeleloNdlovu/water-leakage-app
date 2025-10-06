@@ -55,7 +55,7 @@ def show_header_footer():
         ">
             <h2 style="color:white; margin:0;">Drop Watch SA</h2>
         </div>
-        <div style="height:80px;"></div> <!-- spacer to avoid overlap with header -->
+        <div style="height:120px;"></div> <!-- Increased spacer to avoid header overlap -->
     """, unsafe_allow_html=True)
 
     # Footer fixed at bottom
@@ -109,7 +109,9 @@ def dashboard_page(df):
         plot_bgcolor="white",
         font=dict(color="black", family="Cinzel, serif"),
         hoverlabel=dict(font_color="white", bgcolor="black", font_family="Cinzel, serif"),
-        legend=dict(font=dict(color="black", family="Cinzel, serif"))
+        legend=dict(font=dict(color="black", family="Cinzel, serif")),
+        xaxis=dict(tickfont=dict(color='black', family='Cinzel, serif')),
+        yaxis=dict(tickfont=dict(color='black', family='Cinzel, serif'))
     )
     st.plotly_chart(fig1, use_container_width=True)
 
