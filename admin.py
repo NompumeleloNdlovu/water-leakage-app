@@ -87,7 +87,6 @@ def dashboard_page(df):
     col3.metric("In Progress", (df["Status"] == "In Progress").sum())
     col4.metric("Resolved", (df["Status"] == "Resolved").sum())
 
-    # Reports by Municipality
     st.markdown("<h4>Reports by Municipality</h4>", unsafe_allow_html=True)
     fig1 = px.bar(df, x="Municipality", color="Status", barmode="group")
     fig1.update_layout(
@@ -97,7 +96,6 @@ def dashboard_page(df):
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    # Leak Types Reported
     st.markdown("<h4>Leak Types Reported</h4>", unsafe_allow_html=True)
     fig2 = px.pie(df, names="Leak Type", title="")
     fig2.update_layout(
@@ -129,8 +127,8 @@ def manage_reports_page(df, sheet):
 
         if st.button(f"Update Report {report['ReportID']}", key=f"update_{idx}"):
             try:
-                sheet.update_cell(idx, 8, status)  # col 8 = 'Status'
-                sheet.update_cell(idx, 9, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # col 9 = timestamp
+                sheet.update_cell(idx, 8, status)
+                sheet.update_cell(idx, 9, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 st.success(f"Report {report['ReportID']} updated to '{status}'.")
             except Exception as e:
                 st.error(f"Failed to update: {e}")
@@ -139,25 +137,59 @@ def manage_reports_page(df, sheet):
 def main():
     show_header()
 
-    # ✅ Global light theme styling
+    # ✅ Global light theme styling with modern sidebar
     st.markdown(
         """
         <style>
         .stApp {
             background-color: white !important;
             color: black !important;
+            font-family: 'Arial', sans-serif;
         }
         section[data-testid="stSidebar"] {
-            background-color: #f5f5f5 !important;
+            background-color: #f8f9fa !important;
             color: black !important;
+            padding: 1.5rem 1rem !important;
+            border-right: 1px solid #e0e0e0;
+        }
+        section[data-testid="stSidebar"] * {
+            color: black !important;
+            font-size: 16px;
+        }
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] h4 {
+            font-weight: 600 !important;
+            margin-bottom: 1rem !important;
+        }
+        div[role="radiogroup"] label {
+            padding: 8px 12px !important;
+            margin: 4px 0 !important;
+            border-radius: 6px !important;
+            transition: background-color 0.2s ease;
+        }
+        div[role="radiogroup"] label:hover {
+            background-color: #e6e6e6 !important;
+        }
+        section[data-testid="stSidebar"] button {
+            background-color: #007bff !important;
+            color: white !important;
+            border-radius: 6px !important;
+            padding: 8px 14px !important;
+            border: none !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+        }
+        section[data-testid="stSidebar"] button:hover {
+            background-color: #0056b3 !important;
+            cursor: pointer;
         }
         [data-testid="stMetricLabel"] {
             color: black !important;
         }
         [data-testid="stMetricValue"] {
-            color: black !important;
-        }
-        .stRadio label, .stSelectbox label {
             color: black !important;
         }
         .js-plotly-plot text {
@@ -168,7 +200,6 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Check login status
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
 
@@ -176,7 +207,6 @@ def main():
         login_page()
         return
 
-    # Sidebar
     with st.sidebar:
         st.markdown("### Navigation")
         page = st.radio("Go to:", ["Dashboard", "Manage Reports"])
@@ -184,16 +214,15 @@ def main():
             st.session_state["logged_in"] = False
             st.rerun()
 
-    # Load data
     sheet = get_sheet()
     data = sheet.get_all_records()
     if not data:
         st.info("No reports found.")
         return
+
     df = pd.DataFrame(data)
     df.columns = df.columns.str.strip()
 
-    # Display selected page
     if page == "Dashboard":
         dashboard_page(df)
     elif page == "Manage Reports":
