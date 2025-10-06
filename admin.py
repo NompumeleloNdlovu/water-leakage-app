@@ -42,30 +42,39 @@ def get_base64_of_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 
-# --- Display header with blue background and logo ---
-def show_header():
-    img_path = os.path.join("images", "logo.png")  # Path to logo
-    if os.path.exists(img_path):
-        st.markdown(
-            f"""
-            <div style="
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background-color: #007bff;
-                padding: 1.5rem 0;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                border-bottom: 2px solid #0056b3;
-                width: 100%;
-            ">
-                <img src="data:image/png;base64,{get_base64_of_image(img_path)}"
-                     style="height: 70px; object-fit: contain;" />
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        st.warning("Logo image not found.")
+# --- Display header and footer ---
+def show_header_footer():
+    logo_path = os.path.join("images/images/logo.png")
+    logo_base64 = get_base64_of_image(logo_path) if os.path.exists(logo_path) else None
+
+    # Header
+    st.markdown(f"""
+        <div style="
+            display: flex;
+            align-items: center;
+            background-color: #007bff;
+            padding: 15px 20px;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        ">
+            {f'<img src="data:image/png;base64,{logo_base64}" style="height:50px; margin-right:15px;">' if logo_base64 else ''}
+            <h2 style="color:white; margin:0;">Water Leakage Admin Panel</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Footer
+    st.markdown("""
+        <div style="
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            width: 100%;
+            margin-top: 30px;
+        ">
+            &copy; 2025 Water Leakage Admin Panel
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- Admin Login Page ---
 def login_page():
@@ -149,7 +158,7 @@ def manage_reports_page(df, sheet):
 
 # --- Main App ---
 def main():
-    show_header()
+    show_header_footer()
 
     st.markdown("""
     <style>
