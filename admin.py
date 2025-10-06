@@ -28,11 +28,14 @@ def get_sheet():
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     return sheet
 
-
 # --- Main ---
 def main():
+    # Add logo and title
+    st.image("logo.png", width=180)
     st.title("🚰 Water Leakage Reporting - Admin Panel")
+    st.markdown("---")
 
+    # Admin authentication
     admin_input = st.text_input("Enter Admin Code:", type="password")
     if admin_input != ADMIN_CODE:
         st.warning("Please enter a valid admin code to access the reports.")
@@ -46,7 +49,7 @@ def main():
         return
 
     df = pd.DataFrame(data)
-    # Clean column names (remove leading/trailing spaces)
+    # Clean column names
     df.columns = df.columns.str.strip()
 
     st.success(f"Loaded {len(df)} reports.")
@@ -62,36 +65,33 @@ def main():
 
     # Chart by municipality
     st.subheader("📍 Reports by Municipality")
-    if "Municipality" in df.columns:
-        fig = px.bar(df, x="Municipality", color="Status", barmode="group", title="Reports by Municipality & Status")
-        st.plotly_chart(fig, use_container_width=True)
+    fig = px.bar(df, x="Municipality", color="Status", barmode="group",
+                 title="Reports by Municipality & Status")
+    st.plotly_chart(fig, use_container_width=True)
 
     # Chart by leak type
     st.subheader("💧 Leak Types Reported")
-    if "Leak Type" in df.columns:
-        fig2 = px.pie(df, names="Leak Type", title="Distribution of Leak Types")
-        st.plotly_chart(fig2, use_container_width=True)
+    fig2 = px.pie(df, names="Leak Type", title="Distribution of Leak Types")
+    st.plotly_chart(fig2, use_container_width=True)
 
     # --- Manage reports ---
     st.subheader("🛠 Manage Reports")
-    for idx, report in enumerate(data, start=2):  # start=2 because header row = 1
-        report_id = report.get("ReportID", f"Row {idx-1}")  # fallback if missing
-        st.markdown(f"### Report {report_id}")
+    for idx, report in enumerate(data, start=2):
+        st.markdown(f"### Report {report.get('ReportID', idx-1)}")
         st.write(report)
 
         current_status = report.get("Status", "Pending")
         status = st.selectbox(
-            f"Update status for Report {report_id}",
+            f"Update status for Report {report.get('ReportID', idx-1)}",
             options=["Pending", "In Progress", "Resolved", "Rejected"],
             index=["Pending", "In Progress", "Resolved", "Rejected"].index(current_status),
             key=f"status_{idx}"
         )
 
-        if st.button(f"Update Status for Report {report_id}", key=f"update_{idx}"):
-            # Make sure we update the correct columns (8 = Status, 9 = Timestamp)
-            sheet.update_cell(idx, 8, status)  
-            sheet.update_cell(idx, 9, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            st.success(f"Status for Report {report_id} updated to '{status}'.")
+        if st.button(f"Update Status for Report {report.get('ReportID', idx-1)}", key=f"update_{idx}"):
+            sheet.update_cell(idx, 8, status)  # col 8 = 'Status'
+            sheet.update_cell(idx, 9, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # col 9 = timestamp
+            st.success(f"Status for Report {report.get('ReportID', idx-1)} updated to '{status}'.")
 
 
 if __name__ == "__main__":
