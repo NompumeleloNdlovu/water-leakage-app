@@ -45,17 +45,18 @@ def show_header_footer():
             align-items: center;
             justify-content: center;
             background-color: #007bff;
-            padding: 20px;
+            padding: 30px 0;  /* moved text down */
             width: 100%;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             position: fixed;
             top: 0;
             left: 0;
             z-index: 1000;
+            outline: none; /* remove keyboard/focus outline */
         ">
             <h2 style="color:white; margin:0;">Drop Watch SA</h2>
         </div>
-        <div style="height:120px;"></div> <!-- Increased spacer to avoid header overlap -->
+        <div style="height:140px;"></div> <!-- spacer to avoid header overlap -->
     """, unsafe_allow_html=True)
 
     # Footer fixed at bottom
