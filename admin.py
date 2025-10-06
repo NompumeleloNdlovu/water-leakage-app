@@ -67,9 +67,9 @@ def show_header():
 
 # --- Admin Login Page ---
 def login_page():
-    st.markdown("<h2 style='text-align:center;'>Admin Login</h2>", unsafe_allow_html=True)
-    admin_input = st.text_input("Enter Admin Code:", type="password")
-    if st.button("Login"):
+    st.markdown("<h2 style='text-align:center; color:white;'>Admin Login</h2>", unsafe_allow_html=True)
+    admin_input = st.text_input("Enter Admin Code:", type="password", key="login_input")
+    if st.button("Login", key="login_btn"):
         if admin_input == ADMIN_CODE:
             st.session_state["logged_in"] = True
             st.success("Login successful! Redirecting...")
@@ -92,13 +92,13 @@ def dashboard_page(df):
     fig1.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),            # Axis labels and text remain black
+        font=dict(color="black"),  # Legend and axis text remain black
         hoverlabel=dict(
-            font_color="white",              # Hover text color
-            bgcolor="black"                  # Hover background color
+            font_color="white",      # Hover text color
+            bgcolor="black"          # Hover background color
         ),
         legend=dict(
-            font=dict(color="black")         # Legend/status bar text stays black
+            font=dict(color="black") # Legend text stays black
         )
     )
     st.plotly_chart(fig1, use_container_width=True)
@@ -108,28 +108,28 @@ def dashboard_page(df):
     fig2.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),            # Axis labels and text remain black
+        font=dict(color="black"),  # Legend text remains black
         hoverlabel=dict(
-            font_color="white",              # Hover text color
-            bgcolor="black"                  # Hover background color
+            font_color="white",      # Hover text color
+            bgcolor="black"          # Hover background color
         ),
         legend=dict(
-            font=dict(color="black")         # Legend/status bar text stays black
+            font=dict(color="black") # Legend text stays black
         )
     )
     st.plotly_chart(fig2, use_container_width=True)
 
 # --- Manage Reports Page ---
 def manage_reports_page(df, sheet):
-    st.markdown("<h3>Manage Reports</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:white;'>Manage Reports</h3>", unsafe_allow_html=True)
 
     for idx, report in enumerate(df.to_dict('records'), start=2):
         st.write("---")
-        st.markdown(f"**Report ID:** {report['ReportID']}")
-        st.markdown(f"**Name:** {report['Name']}")
-        st.markdown(f"**Municipality:** {report['Municipality']}")
-        st.markdown(f"**Leak Type:** {report['Leak Type']}")
-        st.markdown(f"**Status:** {report['Status']}")
+        st.markdown(f"**Report ID:** <span style='color:white;'>{report['ReportID']}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Name:** <span style='color:white;'>{report['Name']}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Municipality:** <span style='color:white;'>{report['Municipality']}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Leak Type:** <span style='color:white;'>{report['Leak Type']}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Status:** <span style='color:white;'>{report['Status']}</span>", unsafe_allow_html=True)
 
         current_status = report.get("Status", "Pending")
         status = st.selectbox(
@@ -151,15 +151,18 @@ def manage_reports_page(df, sheet):
 def main():
     show_header()
 
-    # ✅ Global light theme styling with modern sidebar
+    # ✅ Global theme styling
     st.markdown(
         """
         <style>
+        /* Overall App */
         .stApp {
             background-color: white !important;
             color: black !important;
             font-family: 'Arial', sans-serif;
         }
+
+        /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #f8f9fa !important;
             color: black !important;
@@ -169,22 +172,6 @@ def main():
         section[data-testid="stSidebar"] * {
             color: black !important;
             font-size: 16px;
-        }
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3,
-        section[data-testid="stSidebar"] h4 {
-            font-weight: 600 !important;
-            margin-bottom: 1rem !important;
-        }
-        div[role="radiogroup"] label {
-            padding: 8px 12px !important;
-            margin: 4px 0 !important;
-            border-radius: 6px !important;
-            transition: background-color 0.2s ease;
-        }
-        div[role="radiogroup"] label:hover {
-            background-color: #e6e6e6 !important;
         }
         section[data-testid="stSidebar"] button {
             background-color: #007bff !important;
@@ -196,15 +183,20 @@ def main():
             font-weight: 500 !important;
             box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
         }
-        section[data-testid="stSidebar"] button:hover {
-            background-color: #0056b3 !important;
-            cursor: pointer;
-        }
-        [data-testid="stMetricLabel"] {
+
+        /* Metrics */
+        [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
             color: black !important;
         }
-        [data-testid="stMetricValue"] {
-            color: black !important;
+
+        /* Hover labels for Plotly */
+        .js-plotly-plot .hovertext {
+            fill: white !important;
+        }
+
+        /* Dark frame text (login page & manage reports) */
+        div.stTextInput, div.stSelectbox, div.stTextArea, div.stButton, .stMarkdown, .stRadio, .stCheckbox {
+            color: white !important;
         }
         </style>
         """,
