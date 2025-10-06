@@ -28,19 +28,38 @@ def get_sheet():
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     return sheet
 
+
 # --- Main ---
 def main():
-    # Add logo and title
-    st.image("logo.png", width=180)
+    # Full-width banner header
+    st.markdown(
+        """
+        <style>
+            .banner {
+                width: 100%;
+                height: 250px;
+                background-image: url('download.jpeg');
+                background-size: cover;
+                background-position: center;
+                border-radius: 12px;
+                margin-bottom: 20px;
+            }
+        </style>
+        <div class="banner"></div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.title("🚰 Water Leakage Reporting - Admin Panel")
     st.markdown("---")
 
-    # Admin authentication
+    # --- Admin Authentication ---
     admin_input = st.text_input("Enter Admin Code:", type="password")
     if admin_input != ADMIN_CODE:
         st.warning("Please enter a valid admin code to access the reports.")
         return
 
+    # --- Load Data ---
     sheet = get_sheet()
     data = sheet.get_all_records()
 
@@ -49,7 +68,6 @@ def main():
         return
 
     df = pd.DataFrame(data)
-    # Clean column names
     df.columns = df.columns.str.strip()
 
     st.success(f"Loaded {len(df)} reports.")
@@ -63,18 +81,19 @@ def main():
     col3.metric("In Progress", (df["Status"] == "In Progress").sum())
     col4.metric("Resolved", (df["Status"] == "Resolved").sum())
 
-    # Chart by municipality
+    # --- Charts ---
     st.subheader("📍 Reports by Municipality")
-    fig = px.bar(df, x="Municipality", color="Status", barmode="group",
-                 title="Reports by Municipality & Status")
+    fig = px.bar(
+        df, x="Municipality", color="Status",
+        barmode="group", title="Reports by Municipality & Status"
+    )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Chart by leak type
     st.subheader("💧 Leak Types Reported")
     fig2 = px.pie(df, names="Leak Type", title="Distribution of Leak Types")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # --- Manage reports ---
+    # --- Manage Reports ---
     st.subheader("🛠 Manage Reports")
     for idx, report in enumerate(data, start=2):
         st.markdown(f"### Report {report.get('ReportID', idx-1)}")
