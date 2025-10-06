@@ -8,11 +8,10 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import plotly.express as px
 import os
-import base64
 
 # --- App Config ---
 st.set_page_config(
-    page_title="Water Leakage Admin Panel",
+    page_title="Drop Watch SA Admin Panel",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -37,32 +36,24 @@ def get_sheet():
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     return sheet
 
-# --- Convert image to base64 for embedding ---
-def get_base64_of_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-
-# --- Display header and footer with larger logo ---
+# --- Display header and footer ---
 def show_header_footer():
-    logo_path = os.path.join("images/images/logo.png")
-    logo_base64 = get_base64_of_image(logo_path) if os.path.exists(logo_path) else None
-
     # Header
     st.markdown(f"""
         <div style="
             display: flex;
             align-items: center;
+            justify-content: center;
             background-color: #007bff;
-            padding: 15px 20px;
+            padding: 20px;
             width: 100%;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         ">
-            {f'<img src="data:image/png;base64,{logo_base64}" style="height:80px; margin-right:15px;">' if logo_base64 else ''}
-            <h2 style="color:white; margin:0;">Water Leakage Admin Panel</h2>
+            <h2 style="color:white; margin:0;">Drop Watch SA</h2>
         </div>
     """, unsafe_allow_html=True)
 
-    # Footer
+    # Footer (appears after content)
     st.markdown("""
         <div style="
             background-color: #007bff;
@@ -70,9 +61,10 @@ def show_header_footer():
             text-align: center;
             padding: 10px 0;
             width: 100%;
-            margin-top: 30px;
+            position: relative;
+            margin-top: 50px;
         ">
-            &copy; 2025 Water Leakage Admin Panel
+            &copy; 2025 Drop Watch SA
         </div>
     """, unsafe_allow_html=True)
 
