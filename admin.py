@@ -37,13 +37,10 @@ def get_sheet():
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     return sheet
 
-
 # --- Convert image to base64 for embedding ---
 def get_base64_of_image(image_path):
-    """Convert image to base64 so it can be embedded cleanly in HTML."""
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
-
 
 # --- Display header image ---
 def show_header():
@@ -56,18 +53,17 @@ def show_header():
                 justify-content: center;
                 align-items: center;
                 background-color: #ffffff;
-                padding: 0.5rem 0;
-                border-bottom: 1px solid #e0e0e0;
+                padding: 1rem 0;
+                border-bottom: 1px solid #d0d0d0;
             ">
-                <img src="data:image/jpeg;base64,{get_base64_of_image(img_path)}" 
-                     style="width: 30%; max-height: 100px; object-fit: contain;" />
+                <img src="data:image/jpeg;base64,{get_base64_of_image(img_path)}"
+                     style="width: 50%; max-width: 500px; height: auto; object-fit: contain; border-radius: 5px;" />
             </div>
             """,
             unsafe_allow_html=True
         )
     else:
         st.warning("Header image not found.")
-
 
 # --- Admin Login Page ---
 def login_page():
@@ -80,7 +76,6 @@ def login_page():
             st.rerun()
         else:
             st.error("Invalid admin code.")
-
 
 # --- Dashboard Page ---
 def dashboard_page(df):
@@ -95,13 +90,22 @@ def dashboard_page(df):
     # Reports by Municipality
     st.markdown("<h4>Reports by Municipality</h4>", unsafe_allow_html=True)
     fig1 = px.bar(df, x="Municipality", color="Status", barmode="group")
+    fig1.update_layout(
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font=dict(color="black")
+    )
     st.plotly_chart(fig1, use_container_width=True)
 
     # Leak Types Reported
     st.markdown("<h4>Leak Types Reported</h4>", unsafe_allow_html=True)
     fig2 = px.pie(df, names="Leak Type", title="")
+    fig2.update_layout(
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font=dict(color="black")
+    )
     st.plotly_chart(fig2, use_container_width=True)
-
 
 # --- Manage Reports Page ---
 def manage_reports_page(df, sheet):
@@ -131,11 +135,38 @@ def manage_reports_page(df, sheet):
             except Exception as e:
                 st.error(f"Failed to update: {e}")
 
-
 # --- Main App ---
 def main():
     show_header()
-    st.markdown("<style>body{background-color:white;}</style>", unsafe_allow_html=True)
+
+    # ✅ Global light theme styling
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: white !important;
+            color: black !important;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #f5f5f5 !important;
+            color: black !important;
+        }
+        [data-testid="stMetricLabel"] {
+            color: black !important;
+        }
+        [data-testid="stMetricValue"] {
+            color: black !important;
+        }
+        .stRadio label, .stSelectbox label {
+            color: black !important;
+        }
+        .js-plotly-plot text {
+            fill: black !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Check login status
     if "logged_in" not in st.session_state:
@@ -145,7 +176,7 @@ def main():
         login_page()
         return
 
-    # Logout option
+    # Sidebar
     with st.sidebar:
         st.markdown("### Navigation")
         page = st.radio("Go to:", ["Dashboard", "Manage Reports"])
@@ -167,7 +198,6 @@ def main():
         dashboard_page(df)
     elif page == "Manage Reports":
         manage_reports_page(df, sheet)
-
 
 if __name__ == "__main__":
     main()
