@@ -36,7 +36,7 @@ def get_sheet():
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     return sheet
 
-# --- Display header and footer ---
+# --- Display header and fixed footer ---
 def show_header_footer():
     # Header
     st.markdown(f"""
@@ -48,12 +48,18 @@ def show_header_footer():
             padding: 20px;
             width: 100%;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            font-family: 'Cinzel Decorative', serif;
         ">
             <h2 style="color:white; margin:0;">Drop Watch SA</h2>
         </div>
+        <div style="height:80px;"></div> <!-- spacer to avoid overlap with header -->
     """, unsafe_allow_html=True)
 
-    # Footer (appears after content)
+    # Footer fixed at bottom
     st.markdown("""
         <div style="
             background-color: #007bff;
@@ -61,18 +67,22 @@ def show_header_footer():
             text-align: center;
             padding: 10px 0;
             width: 100%;
-            position: relative;
-            margin-top: 50px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+            font-family: 'Cinzel Decorative', serif;
         ">
             &copy; 2025 Drop Watch SA
         </div>
+        <div style="height:40px;"></div> <!-- spacer to avoid overlap with footer -->
     """, unsafe_allow_html=True)
 
 # --- Admin Login Page ---
 def login_page():
     st.markdown("""
         <div style="background-color:black; padding:20px; border-radius:8px;">
-            <h2 style="text-align:center; color:white;">Admin Login</h2>
+            <h2 style="text-align:center; color:white; font-family:'Cinzel Decorative', serif;">Admin Login</h2>
         </div>
     """, unsafe_allow_html=True)
     admin_input = st.text_input("Enter Admin Code:", type="password", key="login_input")
@@ -99,9 +109,9 @@ def dashboard_page(df):
     fig1.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),
-        hoverlabel=dict(font_color="white", bgcolor="black"),
-        legend=dict(font=dict(color="black"))
+        font=dict(color="black", family="Cinzel, serif"),
+        hoverlabel=dict(font_color="white", bgcolor="black", font_family="Cinzel, serif"),
+        legend=dict(font=dict(color="black", family="Cinzel, serif"))
     )
     st.plotly_chart(fig1, use_container_width=True)
 
@@ -110,9 +120,9 @@ def dashboard_page(df):
     fig2.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black"),
-        hoverlabel=dict(font_color="white", bgcolor="black"),
-        legend=dict(font=dict(color="black"))
+        font=dict(color="black", family="Cinzel, serif"),
+        hoverlabel=dict(font_color="white", bgcolor="black", font_family="Cinzel, serif"),
+        legend=dict(font=dict(color="black", family="Cinzel, serif"))
     )
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -123,7 +133,7 @@ def manage_reports_page(df, sheet):
     for idx, report in enumerate(df.to_dict('records'), start=2):
         st.write("---")
         st.markdown(f"""
-            <div style="background-color:white; padding:12px; border-radius:6px; color:black;">
+            <div style="background-color:white; padding:12px; border-radius:6px; color:black; font-family:'Cinzel', serif;">
                 <p><strong>Report ID:</strong> {report['ReportID']}</p>
                 <p><strong>Name:</strong> {report['Name']}</p>
                 <p><strong>Municipality:</strong> {report['Municipality']}</p>
@@ -154,8 +164,14 @@ def main():
 
     st.markdown("""
     <style>
-    /* Overall App */
-    .stApp { background-color: white !important; color: black !important; font-family: 'Arial', sans-serif; }
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Cinzel+Decorative&display=swap');
+
+    /* Overall App text */
+    .stApp { background-color: white !important; color: black !important; font-family: 'Cinzel', serif !important; }
+
+    /* Headers */
+    h1, h2, h3, h4, h5, h6 { font-family: 'Cinzel Decorative', serif !important; }
 
     /* Sidebar */
     section[data-testid="stSidebar"] {
@@ -163,24 +179,32 @@ def main():
         color: black !important;
         padding: 1.5rem 1rem; border-right: 1px solid #e0e0e0;
     }
-    section[data-testid="stSidebar"] * { color: black !important; font-size:16px; }
+    section[data-testid="stSidebar"] * {
+        color: black !important;
+        font-size:16px;
+        font-family: 'Cinzel', serif !important;
+    }
+
+    /* Sidebar buttons */
     section[data-testid="stSidebar"] button {
         background-color:#007bff !important; color:white !important;
         border-radius:6px; padding:8px 14px; border:none;
         font-size:15px; font-weight:500; box-shadow:0 2px 6px rgba(0,0,0,0.15);
+        font-family: 'Cinzel', serif !important;
     }
     section[data-testid="stSidebar"] button:hover { background-color:#0056b3 !important; cursor:pointer; }
 
     /* Metrics */
-    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color:black !important; }
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color:black !important; font-family: 'Cinzel', serif !important; }
 
     /* Plotly hover labels */
-    .js-plotly-plot .hovertext { fill: white !important; }
+    .js-plotly-plot .hovertext { fill: white !important; font-family: 'Cinzel', serif !important; }
 
     /* Dark buttons (login, update report) */
     div.stButton > button {
         color: white !important;
         background-color: #007bff !important;
+        font-family: 'Cinzel', serif !important;
     }
     div.stButton > button:hover {
         background-color: #0056b3 !important;
