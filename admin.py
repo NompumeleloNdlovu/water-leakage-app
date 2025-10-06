@@ -52,7 +52,6 @@ def show_header_footer():
             top: 0;
             left: 0;
             z-index: 1000;
-            font-family: 'Cinzel Decorative', serif;
         ">
             <h2 style="color:white; margin:0;">Drop Watch SA</h2>
         </div>
@@ -71,7 +70,6 @@ def show_header_footer():
             bottom: 0;
             left: 0;
             z-index: 1000;
-            font-family: 'Cinzel Decorative', serif;
         ">
             &copy; 2025 Drop Watch SA
         </div>
@@ -82,7 +80,7 @@ def show_header_footer():
 def login_page():
     st.markdown("""
         <div style="background-color:black; padding:20px; border-radius:8px;">
-            <h2 style="text-align:center; color:white; font-family:'Cinzel Decorative', serif;">Admin Login</h2>
+            <h2 style="text-align:center; color:white;">Admin Login</h2>
         </div>
     """, unsafe_allow_html=True)
     admin_input = st.text_input("Enter Admin Code:", type="password", key="login_input")
@@ -164,14 +162,18 @@ def main():
 
     st.markdown("""
     <style>
-    /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Cinzel+Decorative&display=swap');
+    /* Import Google Font for body text only */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
 
     /* Overall App text */
-    .stApp { background-color: white !important; color: black !important; font-family: 'Cinzel', serif !important; }
+    .stApp { 
+        background-color: white !important; 
+        color: black !important; 
+        font-family: 'Cinzel', serif !important; 
+    }
 
-    /* Headers */
-    h1, h2, h3, h4, h5, h6 { font-family: 'Cinzel Decorative', serif !important; }
+    /* Keep headings default font to avoid hiding */
+    h1, h2, h3, h4, h5, h6 { font-family: inherit !important; }
 
     /* Sidebar */
     section[data-testid="stSidebar"] {
