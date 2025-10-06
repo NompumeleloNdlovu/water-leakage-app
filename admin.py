@@ -92,7 +92,11 @@ def dashboard_page(df):
     fig1.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black")
+        font=dict(color="black"),
+        hoverlabel=dict(
+            font_color="white",  # Hover text color
+            bgcolor="black"      # Hover background color
+        )
     )
     st.plotly_chart(fig1, use_container_width=True)
 
@@ -101,7 +105,11 @@ def dashboard_page(df):
     fig2.update_layout(
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(color="black")
+        font=dict(color="black"),
+        hoverlabel=dict(
+            font_color="white",  # Hover text color
+            bgcolor="black"      # Hover background color
+        )
     )
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -191,9 +199,6 @@ def main():
         }
         [data-testid="stMetricValue"] {
             color: black !important;
-        }
-        .js-plotly-plot text {
-            fill: black !important;
         }
         </style>
         """,
