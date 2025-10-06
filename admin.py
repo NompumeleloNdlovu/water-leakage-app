@@ -42,9 +42,9 @@ def get_base64_of_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 
-# --- Display header image ---
+# --- Display header with blue background and logo ---
 def show_header():
-    img_path = os.path.join("images", "images", "download.jpeg")
+    img_path = os.path.join("images", "logo.png")  # Use logo.png
     if os.path.exists(img_path):
         st.markdown(
             f"""
@@ -52,18 +52,18 @@ def show_header():
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                background-color: #ffffff;
+                background-color: #007bff;  /* Solid blue header */
                 padding: 1rem 0;
-                border-bottom: 1px solid #d0d0d0;
+                border-bottom: 2px solid #0056b3;
             ">
-                <img src="data:image/jpeg;base64,{get_base64_of_image(img_path)}"
-                     style="width: 50%; max-width: 500px; height: auto; object-fit: contain; border-radius: 5px;" />
+                <img src="data:image/png;base64,{get_base64_of_image(img_path)}"
+                     style="height: 60px; object-fit: contain;" />
             </div>
             """,
             unsafe_allow_html=True
         )
     else:
-        st.warning("Header image not found.")
+        st.warning("Logo image not found.")
 
 # --- Admin Login Page ---
 def login_page():
@@ -179,10 +179,10 @@ def main():
     /* Dark buttons (login, update report) */
     div.stButton > button {
         color: white !important;
-        background-color: #333333 !important;
+        background-color: #007bff !important;
     }
     div.stButton > button:hover {
-        background-color: #555555 !important;
+        background-color: #0056b3 !important;
         color: white !important;
     }
     </style>
@@ -218,3 +218,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
