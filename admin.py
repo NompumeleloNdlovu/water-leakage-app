@@ -42,7 +42,7 @@ def get_base64_of_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 
-# --- Display header and footer ---
+# --- Display header and footer with larger logo ---
 def show_header_footer():
     logo_path = os.path.join("images/images/logo.png")
     logo_base64 = get_base64_of_image(logo_path) if os.path.exists(logo_path) else None
@@ -57,7 +57,7 @@ def show_header_footer():
             width: 100%;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         ">
-            {f'<img src="data:image/png;base64,{logo_base64}" style="height:50px; margin-right:15px;">' if logo_base64 else ''}
+            {f'<img src="data:image/png;base64,{logo_base64}" style="height:80px; margin-right:15px;">' if logo_base64 else ''}
             <h2 style="color:white; margin:0;">Water Leakage Admin Panel</h2>
         </div>
     """, unsafe_allow_html=True)
