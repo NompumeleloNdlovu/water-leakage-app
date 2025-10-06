@@ -119,9 +119,9 @@ def manage_reports_page(df, sheet):
 
     for idx, report in enumerate(df.to_dict('records'), start=2):
         st.write("---")
-        # Wrap the report details in a white-background div so text is black
+        # White background report details
         st.markdown(f"""
-            <div style="background-color:white; padding:12px; border-radius:6px;">
+            <div style="background-color:white; padding:12px; border-radius:6px; color:black;">
                 <p><strong>Report ID:</strong> {report['ReportID']}</p>
                 <p><strong>Name:</strong> {report['Name']}</p>
                 <p><strong>Municipality:</strong> {report['Municipality']}</p>
@@ -138,6 +138,7 @@ def manage_reports_page(df, sheet):
             key=f"status_{idx}"
         )
 
+        # Update Report button
         if st.button(f"Update Report {report['ReportID']}", key=f"update_{idx}"):
             try:
                 sheet.update_cell(idx, 8, status)
@@ -150,18 +151,41 @@ def manage_reports_page(df, sheet):
 def main():
     show_header()
 
-    # Global styling
     st.markdown("""
-        <style>
-        .stApp { background-color: white !important; color: black !important; font-family: 'Arial', sans-serif; }
-        section[data-testid="stSidebar"] { background-color: #f8f9fa !important; color: black !important; padding: 1.5rem 1rem; border-right: 1px solid #e0e0e0; }
-        section[data-testid="stSidebar"] * { color: black !important; font-size:16px; }
-        section[data-testid="stSidebar"] button { background-color:#007bff !important; color:white !important; border-radius:6px; padding:8px 14px; border:none; font-size:15px; font-weight:500; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
-        section[data-testid="stSidebar"] button:hover { background-color:#0056b3 !important; cursor:pointer; }
-        [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color:black !important; }
-        /* Hover labels for Plotly */
-        .js-plotly-plot .hovertext { fill: white !important; }
-        </style>
+    <style>
+    /* Overall App */
+    .stApp { background-color: white !important; color: black !important; font-family: 'Arial', sans-serif; }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #f8f9fa !important;
+        color: black !important;
+        padding: 1.5rem 1rem; border-right: 1px solid #e0e0e0;
+    }
+    section[data-testid="stSidebar"] * { color: black !important; font-size:16px; }
+    section[data-testid="stSidebar"] button {
+        background-color:#007bff !important; color:white !important;
+        border-radius:6px; padding:8px 14px; border:none;
+        font-size:15px; font-weight:500; box-shadow:0 2px 6px rgba(0,0,0,0.15);
+    }
+    section[data-testid="stSidebar"] button:hover { background-color:#0056b3 !important; cursor:pointer; }
+
+    /* Metrics */
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color:black !important; }
+
+    /* Plotly hover labels */
+    .js-plotly-plot .hovertext { fill: white !important; }
+
+    /* Dark buttons (login, update report) */
+    div.stButton > button {
+        color: white !important;
+        background-color: #333333 !important;
+    }
+    div.stButton > button:hover {
+        background-color: #555555 !important;
+        color: white !important;
+    }
+    </style>
     """, unsafe_allow_html=True)
 
     if "logged_in" not in st.session_state:
