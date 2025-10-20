@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin_dashboard_modern_multimedia_fixed.py"""
+"""admin_dashboard_modern_multimedia_fixed_v2.py"""
 
 import streamlit as st
 import gspread
@@ -173,7 +173,7 @@ def main():
         if st.button("Login"):
             if code == ADMIN_CODE:
                 st.session_state["logged_in"] = True
-                st.experimental_rerun()
+                st.success("Login successful! Please navigate using the sidebar.")
             else:
                 st.error("Invalid admin code")
         return  # Stop further execution until login
@@ -184,7 +184,7 @@ def main():
         page = st.radio("Go to:", ["Dashboard", "Manage Reports"])
         if st.button("Logout"):
             st.session_state["logged_in"] = False
-            st.experimental_rerun()
+            st.experimental_rerun()  # This one can now be kept if needed; optional
 
     # --- Load Data ---
     sheet, df = get_sheet_data()
