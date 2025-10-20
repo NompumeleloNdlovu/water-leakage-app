@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin_dashboard_modern_multimedia.py"""
+"""admin_dashboard_modern_multimedia_fixed.py"""
 
 import streamlit as st
 import gspread
@@ -20,12 +20,12 @@ st.set_page_config(
 ADMIN_CODE = st.secrets["general"]["admin_code"]
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
-# --- Status Colors (Professional Palette) ---
+# --- Status Colors ---
 STATUS_COLORS = {
-    "Pending": "#f4a261",      # soft yellow
-    "In Progress": "#e76f51",  # orange/red
-    "Resolved": "#2a9d8f",     # teal/blue
-    "Rejected": "#e63946"      # red
+    "Pending": "#f4a261",
+    "In Progress": "#e76f51",
+    "Resolved": "#2a9d8f",
+    "Rejected": "#e63946"
 }
 
 # --- Professional Palette ---
@@ -35,7 +35,7 @@ BUTTON_COLOR = "#00b4d8"
 METRIC_COLOR = "#333333"
 BG_COLOR = "#f5f5f5"
 
-# --- Helper: Connect to Google Sheets ---
+# --- Connect to Google Sheets ---
 @st.cache_data
 def get_sheet_data():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -56,23 +56,6 @@ def update_report(sheet, row_idx, status):
         st.success(f"Report updated to '{status}'.")
     except Exception as e:
         st.error(f"Failed to update: {e}")
-
-# --- Login ---
-def login_page():
-    st.markdown("### Admin Login")
-    code = st.text_input("Enter Admin Code:", type="password")
-    if st.button("Login"):
-        if code == ADMIN_CODE:
-            st.session_state["logged_in"] = True
-            st.experimental_rerun()
-        else:
-            st.error("Invalid admin code")
-
-def login_required(func):
-    if not st.session_state.get("logged_in", False):
-        login_page()
-        return False
-    return True
 
 # --- Header / Footer ---
 def show_header_footer():
@@ -129,10 +112,10 @@ def dashboard_page(df):
     st.subheader("Leak Status by Type")
     st.plotly_chart(fig4, use_container_width=True)
 
-    # Map with multimedia popups
+    # Map
     if "Latitude" in df.columns and "Longitude" in df.columns:
         st.subheader("Leak Locations Map")
-        df_map = df.dropna(subset=['Latitude', 'Longitude'])
+        df_map = df.dropna(subset=['Latitude','Longitude'])
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=df_map,
@@ -141,14 +124,16 @@ def dashboard_page(df):
             get_fill_color='[230, 80, 80, 160]',
             pickable=True
         )
-        view_state = pdk.ViewState(latitude=df_map['Latitude'].mean(),
-                                   longitude=df_map['Longitude'].mean(),
-                                   zoom=6, pitch=0)
+        view_state = pdk.ViewState(
+            latitude=df_map['Latitude'].mean(),
+            longitude=df_map['Longitude'].mean(),
+            zoom=6, pitch=0
+        )
         r = pdk.Deck(layers=[layer], initial_view_state=view_state,
                      tooltip={"text": "ReportID: {ReportID}\nStatus: {Status}"})
         st.pydeck_chart(r)
 
-# --- Manage Reports Page with Images/Videos ---
+# --- Manage Reports with Images/Videos ---
 def manage_reports_page(df, sheet):
     st.header("Manage Reports")
     for idx, report in enumerate(df.to_dict("records"), start=2):
@@ -158,30 +143,42 @@ def manage_reports_page(df, sheet):
                 **Leak Type:** {report['Leak Type']}  
                 **Status:** {report['Status']}  
             """)
-            # Display images
+            # Images
             images = report.get("Images", [])
             for img in images:
                 st.image(img, width=300)
-            # Display video
+            # Video
             video = report.get("VideoURL")
             if video:
                 st.video(video)
-
+            
             status = st.selectbox("Update Status",
                                   options=["Pending", "In Progress", "Resolved", "Rejected"],
-                                  index=["Pending", "In Progress", "Resolved", "Rejected"].index(report.get("Status", "Pending")),
+                                  index=["Pending", "In Progress", "Resolved", "Rejected"].index(report.get("Status","Pending")),
                                   key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 update_report(sheet, idx, status)
 
-# --- Main ---
+# --- Main App ---
 def main():
     show_header_footer()
+    
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
-    if not login_required(main):
-        return
 
+    # --- Login Check ---
+    if not st.session_state["logged_in"]:
+        st.markdown("### Admin Login")
+        code = st.text_input("Enter Admin Code:", type="password")
+        if st.button("Login"):
+            if code == ADMIN_CODE:
+                st.session_state["logged_in"] = True
+                st.experimental_rerun()
+            else:
+                st.error("Invalid admin code")
+        return  # Stop further execution until login
+
+    # --- Sidebar Navigation ---
     with st.sidebar:
         st.header("Navigation")
         page = st.radio("Go to:", ["Dashboard", "Manage Reports"])
@@ -189,12 +186,14 @@ def main():
             st.session_state["logged_in"] = False
             st.experimental_rerun()
 
+    # --- Load Data ---
     sheet, df = get_sheet_data()
     if df.empty:
         st.info("No reports found.")
         return
-
     df.columns = df.columns.str.strip()
+
+    # --- Page Rendering ---
     if page == "Dashboard":
         dashboard_page(df)
     elif page == "Manage Reports":
