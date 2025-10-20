@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin_dashboard_modern_minimal.py"""
+"""admin_dashboard_modern_professional_plus.py"""
 
 import streamlit as st
 import gspread
@@ -19,15 +19,22 @@ st.set_page_config(
 ADMIN_CODE = st.secrets["general"]["admin_code"]
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
-# --- Status Colors ---
+# --- Status Colors (Professional Palette) ---
 STATUS_COLORS = {
-    "Pending": "#f4a261",
-    "In Progress": "#e76f51",
-    "Resolved": "#2a9d8f",
-    "Rejected": "#e63946"
+    "Pending": "#f4a261",      # soft yellow
+    "In Progress": "#e76f51",  # orange/red
+    "Resolved": "#2a9d8f",     # teal/blue
+    "Rejected": "#e63946"      # red
 }
 
-# --- Helper: Connect to Google Sheets and load data ---
+# --- Professional Palette ---
+HEADER_FOOTER_COLOR = "#006d77"  # deep teal
+SIDEBAR_COLOR = "#83c5be"         # light teal
+BUTTON_COLOR = "#00b4d8"          # cyan accent
+METRIC_COLOR = "#333333"          # dark gray
+BG_COLOR = "#f5f5f5"              # off-white
+
+# --- Helper: Connect to Google Sheets ---
 @st.cache_data
 def get_sheet_data():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -69,29 +76,32 @@ def login_required(func):
 
 # --- Header / Footer ---
 def show_header_footer():
-    st.markdown("""
+    st.markdown(f"""
     <style>
     /* Header & Footer */
-    .header {background-color:#4a4e69; color:white; text-align:center; padding:25px; font-size:24px; font-family:Cinzel, serif;}
-    .footer {background-color:#4a4e69; color:white; text-align:center; padding:10px; font-family:Cinzel, serif; position:fixed; bottom:0; width:100%;}
+    .header {{background-color:{HEADER_FOOTER_COLOR}; color:white; text-align:center; padding:25px; font-size:24px; font-family:Cinzel, serif;}}
+    .footer {{background-color:{HEADER_FOOTER_COLOR}; color:white; text-align:center; padding:10px; font-family:Cinzel, serif; position:fixed; bottom:0; width:100%;}}
 
     /* Sidebar */
-    section[data-testid="stSidebar"] { background-color:#9a8c98 !important; color:#222222 !important; padding:1.5rem 1rem; }
-    section[data-testid="stSidebar"] * { color:#222222 !important; font-family:'Cinzel', serif !important; font-size:16px; }
+    section[data-testid="stSidebar"] {{ background-color:{SIDEBAR_COLOR} !important; color:{METRIC_COLOR} !important; padding:1.5rem 1rem; }}
+    section[data-testid="stSidebar"] * {{ color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; font-size:16px; }}
+
+    /* Remove keyboard accessibility text in sidebar */
+    section[data-testid="stSidebar"] span[title="Keyboard"] {{ display:none !important; }}
 
     /* Buttons */
-    div.stButton > button {
+    div.stButton > button {{
         color: white !important;
-        background-color: #c9ada7 !important;
+        background-color: {BUTTON_COLOR} !important;
         font-family: 'Cinzel', serif !important;
-    }
-    div.stButton > button:hover { background-color: #b794a3 !important; cursor:pointer; }
+    }}
+    div.stButton > button:hover {{ background-color: #009acb !important; cursor:pointer; }}
 
     /* Metrics */
-    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color:#222222 !important; font-family:'Cinzel', serif !important; }
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {{ color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; }}
 
     /* App background */
-    .stApp { background-color: #ffffff !important; color:#222222 !important; font-family:'Cinzel', serif !important; }
+    .stApp {{ background-color: {BG_COLOR} !important; color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; }}
 
     </style>
     """, unsafe_allow_html=True)
@@ -129,6 +139,35 @@ def dashboard_page(df):
         template="plotly_white"
     )
     st.plotly_chart(fig2, use_container_width=True)
+
+    # --- New Plot 1: Trend Over Time ---
+    if "DateReported" in df.columns:
+        df['DateReported'] = pd.to_datetime(df['DateReported'])
+        time_series = df.groupby(['DateReported','Status']).size().reset_index(name='Count')
+        fig3 = px.line(
+            time_series,
+            x='DateReported',
+            y='Count',
+            color='Status',
+            title="Reports Over Time",
+            template="plotly_white",
+            color_discrete_map=STATUS_COLORS
+        )
+        st.subheader("Reports Over Time")
+        st.plotly_chart(fig3, use_container_width=True)
+
+    # --- New Plot 2: Stacked Bar by Leak Type ---
+    fig4 = px.bar(
+        df,
+        x='Leak Type',
+        color='Status',
+        barmode='stack',
+        color_discrete_map=STATUS_COLORS,
+        template="plotly_white",
+        title="Leak Status by Type"
+    )
+    st.subheader("Leak Status by Type")
+    st.plotly_chart(fig4, use_container_width=True)
 
 # --- Manage Reports Page ---
 def manage_reports_page(df, sheet):
@@ -179,4 +218,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
