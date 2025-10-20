@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin_dashboard_modern_professional_plus.py"""
+"""admin_dashboard_modern_multimedia.py"""
 
 import streamlit as st
 import gspread
@@ -7,6 +7,7 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import plotly.express as px
+import pydeck as pdk
 
 # --- App Config ---
 st.set_page_config(
@@ -28,11 +29,11 @@ STATUS_COLORS = {
 }
 
 # --- Professional Palette ---
-HEADER_FOOTER_COLOR = "#006d77"  # deep teal
-SIDEBAR_COLOR = "#83c5be"         # light teal
-BUTTON_COLOR = "#00b4d8"          # cyan accent
-METRIC_COLOR = "#333333"          # dark gray
-BG_COLOR = "#f5f5f5"              # off-white
+HEADER_FOOTER_COLOR = "#006d77"
+SIDEBAR_COLOR = "#83c5be"
+BUTTON_COLOR = "#00b4d8"
+METRIC_COLOR = "#333333"
+BG_COLOR = "#f5f5f5"
 
 # --- Helper: Connect to Google Sheets ---
 @st.cache_data
@@ -47,7 +48,7 @@ def get_sheet_data():
     df = pd.DataFrame(sheet.get_all_records())
     return sheet, df
 
-# --- Helper: Update report ---
+# --- Update report ---
 def update_report(sheet, row_idx, status):
     try:
         sheet.update_cell(row_idx, 8, status)
@@ -56,7 +57,7 @@ def update_report(sheet, row_idx, status):
     except Exception as e:
         st.error(f"Failed to update: {e}")
 
-# --- Login Page ---
+# --- Login ---
 def login_page():
     st.markdown("### Admin Login")
     code = st.text_input("Enter Admin Code:", type="password")
@@ -67,7 +68,6 @@ def login_page():
         else:
             st.error("Invalid admin code")
 
-# --- Decorator for pages requiring login ---
 def login_required(func):
     if not st.session_state.get("logged_in", False):
         login_page()
@@ -78,35 +78,17 @@ def login_required(func):
 def show_header_footer():
     st.markdown(f"""
     <style>
-    /* Header & Footer */
     .header {{background-color:{HEADER_FOOTER_COLOR}; color:white; text-align:center; padding:25px; font-size:24px; font-family:Cinzel, serif;}}
     .footer {{background-color:{HEADER_FOOTER_COLOR}; color:white; text-align:center; padding:10px; font-family:Cinzel, serif; position:fixed; bottom:0; width:100%;}}
-
-    /* Sidebar */
     section[data-testid="stSidebar"] {{ background-color:{SIDEBAR_COLOR} !important; color:{METRIC_COLOR} !important; padding:1.5rem 1rem; }}
     section[data-testid="stSidebar"] * {{ color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; font-size:16px; }}
-
-    /* Buttons */
-    div.stButton > button {{
-        color: white !important;
-        background-color: {BUTTON_COLOR} !important;
-        font-family: 'Cinzel', serif !important;
-    }}
+    div.stButton > button {{ color: white !important; background-color: {BUTTON_COLOR} !important; font-family: 'Cinzel', serif !important; }}
     div.stButton > button:hover {{ background-color: #009acb !important; cursor:pointer; }}
-
-    /* Metrics */
     [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {{ color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; }}
-
-    /* App background */
     .stApp {{ background-color: {BG_COLOR} !important; color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; }}
-
-    /* Hide keyboard label in sidebar */
-    section[data-testid="stSidebar"] div[aria-label="Keyboard"] {{
-        display: none !important;
-    }}
+    section[data-testid="stSidebar"] div[aria-label="Keyboard"] {{ display: none !important; }}
     </style>
     """, unsafe_allow_html=True)
-
     st.markdown('<div class="header">Drop Watch SA</div>', unsafe_allow_html=True)
     st.markdown('<div class="footer">&copy; 2025 Drop Watch SA</div>', unsafe_allow_html=True)
     st.markdown("<div style='margin-top:80px; margin-bottom:60px;'></div>", unsafe_allow_html=True)
@@ -121,56 +103,52 @@ def dashboard_page(df):
     col4.metric("Resolved", (df["Status"]=="Resolved").sum())
 
     st.subheader("Reports by Municipality")
-    fig1 = px.bar(
-        df,
-        x="Municipality",
-        color="Status",
-        barmode="group",
-        color_discrete_map=STATUS_COLORS,
-        template="plotly_white"
-    )
+    fig1 = px.bar(df, x="Municipality", color="Status", barmode="group",
+                  color_discrete_map=STATUS_COLORS, template="plotly_white")
     st.plotly_chart(fig1, use_container_width=True)
 
     st.subheader("Leak Types Reported")
-    fig2 = px.pie(
-        df,
-        names="Leak Type",
-        color="Status",
-        color_discrete_map=STATUS_COLORS,
-        template="plotly_white"
-    )
+    fig2 = px.pie(df, names="Leak Type", color="Status",
+                  color_discrete_map=STATUS_COLORS, template="plotly_white")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # --- New Plot 1: Trend Over Time ---
+    # Trend over time
     if "DateReported" in df.columns:
         df['DateReported'] = pd.to_datetime(df['DateReported'])
-        time_series = df.groupby(['DateReported','Status']).size().reset_index(name='Count')
-        fig3 = px.line(
-            time_series,
-            x='DateReported',
-            y='Count',
-            color='Status',
-            title="Reports Over Time",
-            template="plotly_white",
-            color_discrete_map=STATUS_COLORS
-        )
+        ts = df.groupby(['DateReported','Status']).size().reset_index(name='Count')
+        fig3 = px.line(ts, x='DateReported', y='Count', color='Status',
+                       color_discrete_map=STATUS_COLORS, template="plotly_white",
+                       title="Reports Over Time")
         st.subheader("Reports Over Time")
         st.plotly_chart(fig3, use_container_width=True)
 
-    # --- New Plot 2: Stacked Bar by Leak Type ---
-    fig4 = px.bar(
-        df,
-        x='Leak Type',
-        color='Status',
-        barmode='stack',
-        color_discrete_map=STATUS_COLORS,
-        template="plotly_white",
-        title="Leak Status by Type"
-    )
+    # Stacked bar by Leak Type
+    fig4 = px.bar(df, x='Leak Type', color='Status', barmode='stack',
+                  color_discrete_map=STATUS_COLORS, template="plotly_white",
+                  title="Leak Status by Type")
     st.subheader("Leak Status by Type")
     st.plotly_chart(fig4, use_container_width=True)
 
-# --- Manage Reports Page ---
+    # Map with multimedia popups
+    if "Latitude" in df.columns and "Longitude" in df.columns:
+        st.subheader("Leak Locations Map")
+        df_map = df.dropna(subset=['Latitude', 'Longitude'])
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df_map,
+            get_position='[Longitude, Latitude]',
+            get_radius=200,
+            get_fill_color='[230, 80, 80, 160]',
+            pickable=True
+        )
+        view_state = pdk.ViewState(latitude=df_map['Latitude'].mean(),
+                                   longitude=df_map['Longitude'].mean(),
+                                   zoom=6, pitch=0)
+        r = pdk.Deck(layers=[layer], initial_view_state=view_state,
+                     tooltip={"text": "ReportID: {ReportID}\nStatus: {Status}"})
+        st.pydeck_chart(r)
+
+# --- Manage Reports Page with Images/Videos ---
 def manage_reports_page(df, sheet):
     st.header("Manage Reports")
     for idx, report in enumerate(df.to_dict("records"), start=2):
@@ -180,22 +158,27 @@ def manage_reports_page(df, sheet):
                 **Leak Type:** {report['Leak Type']}  
                 **Status:** {report['Status']}  
             """)
-            status = st.selectbox(
-                "Update Status",
-                options=["Pending", "In Progress", "Resolved", "Rejected"],
-                index=["Pending", "In Progress", "Resolved", "Rejected"].index(report.get("Status", "Pending")),
-                key=f"status_{idx}"
-            )
+            # Display images
+            images = report.get("Images", [])
+            for img in images:
+                st.image(img, width=300)
+            # Display video
+            video = report.get("VideoURL")
+            if video:
+                st.video(video)
+
+            status = st.selectbox("Update Status",
+                                  options=["Pending", "In Progress", "Resolved", "Rejected"],
+                                  index=["Pending", "In Progress", "Resolved", "Rejected"].index(report.get("Status", "Pending")),
+                                  key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 update_report(sheet, idx, status)
 
-# --- Main App ---
+# --- Main ---
 def main():
     show_header_footer()
-
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
-
     if not login_required(main):
         return
 
