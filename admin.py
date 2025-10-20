@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin_dashboard_modern_multimedia_fixed_v2.py"""
+"""admin_dashboard_modern_multimedia_images_fixed.py"""
 
 import streamlit as st
 import gspread
@@ -8,6 +8,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import plotly.express as px
 import pydeck as pdk
+import ast  # For parsing image lists
 
 # --- App Config ---
 st.set_page_config(
@@ -46,6 +47,22 @@ def get_sheet_data():
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
     df = pd.DataFrame(sheet.get_all_records())
+
+    # --- Parse Images Column ---
+    if "Images" in df.columns:
+        def parse_images(img_str):
+            if pd.isna(img_str) or img_str.strip() == "":
+                return []
+            try:
+                return ast.literal_eval(img_str)
+            except:
+                return [img_str]
+        df["Images"] = df["Images"].apply(parse_images)
+
+    # --- Ensure VideoURL column exists ---
+    if "VideoURL" not in df.columns:
+        df["VideoURL"] = ""
+        
     return sheet, df
 
 # --- Update report ---
@@ -95,7 +112,6 @@ def dashboard_page(df):
                   color_discrete_map=STATUS_COLORS, template="plotly_white")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # Trend over time
     if "DateReported" in df.columns:
         df['DateReported'] = pd.to_datetime(df['DateReported'])
         ts = df.groupby(['DateReported','Status']).size().reset_index(name='Count')
@@ -105,7 +121,6 @@ def dashboard_page(df):
         st.subheader("Reports Over Time")
         st.plotly_chart(fig3, use_container_width=True)
 
-    # Stacked bar by Leak Type
     fig4 = px.bar(df, x='Leak Type', color='Status', barmode='stack',
                   color_discrete_map=STATUS_COLORS, template="plotly_white",
                   title="Leak Status by Type")
@@ -144,14 +159,13 @@ def manage_reports_page(df, sheet):
                 **Status:** {report['Status']}  
             """)
             # Images
-            images = report.get("Images", [])
-            for img in images:
+            for img in report.get("Images", []):
                 st.image(img, width=300)
             # Video
             video = report.get("VideoURL")
-            if video:
+            if video and video.strip() != "":
                 st.video(video)
-            
+
             status = st.selectbox("Update Status",
                                   options=["Pending", "In Progress", "Resolved", "Rejected"],
                                   index=["Pending", "In Progress", "Resolved", "Rejected"].index(report.get("Status","Pending")),
@@ -162,7 +176,7 @@ def manage_reports_page(df, sheet):
 # --- Main App ---
 def main():
     show_header_footer()
-    
+
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
 
@@ -176,7 +190,7 @@ def main():
                 st.success("Login successful! Please navigate using the sidebar.")
             else:
                 st.error("Invalid admin code")
-        return  # Stop further execution until login
+        return
 
     # --- Sidebar Navigation ---
     with st.sidebar:
@@ -184,7 +198,7 @@ def main():
         page = st.radio("Go to:", ["Dashboard", "Manage Reports"])
         if st.button("Logout"):
             st.session_state["logged_in"] = False
-            st.experimental_rerun()  # This one can now be kept if needed; optional
+            st.experimental_rerun()
 
     # --- Load Data ---
     sheet, df = get_sheet_data()
