@@ -86,9 +86,6 @@ def show_header_footer():
     section[data-testid="stSidebar"] {{ background-color:{SIDEBAR_COLOR} !important; color:{METRIC_COLOR} !important; padding:1.5rem 1rem; }}
     section[data-testid="stSidebar"] * {{ color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; font-size:16px; }}
 
-    /* Remove keyboard accessibility text in sidebar */
-    section[data-testid="stSidebar"] span[title="Keyboard"] {{ display:none !important; }}
-
     /* Buttons */
     div.stButton > button {{
         color: white !important;
@@ -103,6 +100,10 @@ def show_header_footer():
     /* App background */
     .stApp {{ background-color: {BG_COLOR} !important; color:{METRIC_COLOR} !important; font-family:'Cinzel', serif !important; }}
 
+    /* Hide keyboard label in sidebar */
+    section[data-testid="stSidebar"] div[aria-label="Keyboard"] {{
+        display: none !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
