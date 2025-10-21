@@ -6,7 +6,6 @@ import plotly.express as px
 import base64
 from datetime import datetime, timedelta
 import time
-from PIL import Image
 
 # ------------------ CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -99,15 +98,25 @@ def login_page():
         else:
             st.error("Invalid code")
 
-# ------------------ HOME PAGE with IMAGE and LIVE COUNTERS ------------------
+# ------------------ HOME PAGE with WELCOME BANNER ------------------
 def home_page():
-    st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:20px; border-radius:10px; margin-bottom:15px;'>"
-                f"<h2 style='text-align:center;color:black;'>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2></div>", unsafe_allow_html=True)
-    
-    # Show home page image
-    image = Image.open("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
-    st.image(image, use_column_width=True)
+    # Welcome banner with image background
+    st.markdown(f"""
+        <div style="
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg');
+            background-size: cover;
+            background-position: center;
+            padding: 50px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+        ">
+            <h2>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2>
+        </div>
+        <br>
+    """, unsafe_allow_html=True)
 
+    # Live counters below the banner
     last_month = datetime.today() - timedelta(days=30)
     df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
     if "DateTime" in df_admin.columns:
@@ -154,7 +163,7 @@ def municipal_overview_page():
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
 
-    # -------- Municipal Overview Charts --------
+    # Municipal Overview Charts
     if not df_filtered.empty:
         st.markdown("### Leak Type Distribution")
         if "Leak Type" in df_filtered.columns:
