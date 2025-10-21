@@ -1,11 +1,10 @@
-plotly
-pandas
-gspread
-google-auth
-streamlit
-streamlit
-pandas
-geocoder
-gspread
-google-auth
 
+streamlit
+gspread
+pandas
+plotly
+pydeck
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
