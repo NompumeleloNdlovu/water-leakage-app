@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""admin.py — Water Leakage Report Admin Dashboard"""
+"""Admin Dashboard for Water Leakage Reports"""
 
 import streamlit as st
 import gspread
@@ -8,103 +8,177 @@ import json
 from google.oauth2.service_account import Credentials
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Admin Dashboard", layout="wide")
+st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 
-# --- GOOGLE SHEETS SETUP ---
+# --- SETTINGS ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-ADMIN_CODE = "admin123"  # Change this to your own secret admin code
+ADMIN_CODE = "admin123"  # change this to your secure code
 
-# --- LOAD CREDENTIALS SECURELY FROM STREAMLIT SECRETS ---
-st.write(st.secrets["google"].keys())  # Should output: ['service_account']
-client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).sheet1
-
-# --- APP HEADER ---
-st.title("💧 Water Leakage Report Admin Dashboard")
-st.markdown("Manage and monitor water leakage reports submitted by users in real-time.")
-
-# --- LOGIN SECTION ---
-admin_input = st.text_input("Enter admin access code:", type="password")
-
-if admin_input == ADMIN_CODE:
-    st.success("Access granted ✅")
-
-    # --- LOAD DATA FROM GOOGLE SHEET ---
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-
-    if not df.empty:
-        # --- SIDEBAR FILTERS ---
-        st.sidebar.header("🔍 Filter Reports")
-        selected_status = st.sidebar.selectbox("Filter by Status", ["All"] + list(df["Status"].unique()))
-        selected_municipality = st.sidebar.selectbox("Filter by Municipality", ["All"] + list(df["Municipality"].unique()))
-
-        # --- APPLY FILTERS ---
-        filtered_df = df.copy()
-        if selected_status != "All":
-            filtered_df = filtered_df[filtered_df["Status"] == selected_status]
-        if selected_municipality != "All":
-            filtered_df = filtered_df[filtered_df["Municipality"] == selected_municipality]
-
-        # --- DISPLAY FILTERED DATA ---
-        st.subheader("📋 Filtered Water Leakage Reports")
-        st.dataframe(filtered_df, use_container_width=True)
-
-        # --- DOWNLOAD SECTION ---
-        st.subheader("📥 Download Reports")
-        csv = filtered_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download as CSV",
-            data=csv,
-            file_name="water_leakage_reports.csv",
-            mime="text/csv"
-        )
-
-        excel = pd.ExcelWriter("/tmp/water_leakage_reports.xlsx", engine='openpyxl')
-        filtered_df.to_excel(excel, index=False, sheet_name="Reports")
-        excel.close()
-
-        with open("/tmp/water_leakage_reports.xlsx", "rb") as f:
-            st.download_button(
-                label="Download as Excel",
-                data=f,
-                file_name="water_leakage_reports.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        # --- UPDATE STATUS SECTION ---
-        st.subheader("🛠️ Update Report Status")
-        if not df["ReportID"].empty:
-            report_ids = df["ReportID"].tolist()
-            selected_report = st.selectbox("Select Report ID to Update", report_ids)
-            new_status = st.selectbox("Select New Status", ["Pending", "In Progress", "Resolved"])
-
-            if st.button("Update Status"):
-                try:
-                    cell = sheet.find(str(selected_report))
-                    if cell:
-                        status_col = df.columns.get_loc("Status") + 1
-                        sheet.update_cell(cell.row, status_col, new_status)
-                        st.success(f"✅ Status updated for Report ID {selected_report}")
-                        st.experimental_rerun()
-                    else:
-                        st.error("❌ Report ID not found in Google Sheet.")
-                except Exception as e:
-                    st.error(f"⚠️ An error occurred: {e}")
-        else:
-            st.info("No reports found to update.")
-    else:
-        st.info("No reports found yet.")
-else:
-    if admin_input:
-        st.error("Incorrect access code ❌")
+# --- LOAD GOOGLE SHEETS CREDENTIALS SECURELY ---
+try:
+    creds_dict = json.loads(st.secrets["google"]["service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    client = gspread.authorize(creds)
+    sheet = client.open(SHEET_NAME).sheet1
+except KeyError:
+    st.error("⚠️ Google service account secret not found. Check Streamlit secrets.")
+    st.stop()
+except Exception as e:
+    st.error(f"⚠️ Failed to connect to Google Sheets: {e}")
     st.stop()
 
-# --- FOOTER ---
-st.markdown("---")
-st.markdown(
-    "<div style='text-align:center; color:grey;'>© 2025 Water Leakage Reporting System | Powered by Streamlit</div>",
-    unsafe_allow_html=True
-)
+# --- HEADER & FOOTER ---
+def show_header_footer():
+    st.markdown("""
+    <style>
+        .header {position:fixed;top:0;left:0;width:100%;display:flex;align-items:center;justify-content:center;
+                  gap:12px;background:linear-gradient(90deg,#0d6efd,#0b5ed7);color:white;padding:18px 0;
+                  font-family:'Cinzel', serif;font-weight:600;font-size:26px;box-shadow:0 4px 8px rgba(0,0,0,0.15);z-index:999;}
+        .header img {height:45px;width:auto;border-radius:6px;}
+        .header-spacer {height:90px;}
+        .footer {position:fixed;bottom:0;left:0;width:100%;background:#0d6efd;color:white;text-align:center;
+                 padding:10px 0;font-family:'Cinzel', serif;font-size:14px;box-shadow:0 -2px 6px rgba(0,0,0,0.15);z-index:999;}
+        .footer-spacer {height:40px;}
+    </style>
+    <div class="header">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png">
+        <span>Drop Watch SA Admin Panel</span>
+    </div>
+    <div class="header-spacer"></div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="footer">&copy; 2025 Drop Watch SA | Water Security Initiative</div>
+    <div class="footer-spacer"></div>
+    """, unsafe_allow_html=True)
+
+# --- LOAD DATA ---
+@st.cache_data(ttl=60)
+def load_data():
+    try:
+        data = sheet.get_all_records()
+        return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"⚠️ Failed to load data: {e}")
+        return pd.DataFrame()
+
+# --- UPDATE STATUS ---
+def update_status(report_id, new_status):
+    df = load_data()
+    try:
+        cell = sheet.find(str(report_id))
+        if cell:
+            status_col = df.columns.get_loc("Status") + 1
+            sheet.update_cell(cell.row, status_col, new_status)
+            st.cache_data.clear()
+            return True
+    except Exception as e:
+        st.error(f"⚠️ Failed to update status: {e}")
+    return False
+
+# --- LOGIN PAGE ---
+def login_page():
+    show_header_footer()
+    st.markdown("""
+        <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
+            <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
+                <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
+                <p style='color:#555;'>Administrator Access</p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    code = st.text_input("Enter Admin Code:", type="password", key="login_input")
+    if st.button("Login", use_container_width=True):
+        if code == ADMIN_CODE:
+            st.session_state["logged_in"] = True
+            st.success("✅ Login successful! Redirecting...")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Invalid admin code")
+    st.stop()
+
+# --- MANAGE REPORTS ---
+def manage_reports():
+    show_header_footer()
+    st.title("Manage Leak Reports")
+    df = load_data()
+
+    if df.empty:
+        st.info("No reports found.")
+        return
+
+    # Sidebar Filters
+    st.sidebar.header("Filter Reports")
+    status_filter = st.sidebar.selectbox("Status", ["All"] + list(df["Status"].unique()))
+    municipality_filter = st.sidebar.selectbox("Municipality", ["All"] + list(df["Municipality"].unique()))
+
+    filtered_df = df.copy()
+    if status_filter != "All":
+        filtered_df = filtered_df[filtered_df["Status"] == status_filter]
+    if municipality_filter != "All":
+        filtered_df = filtered_df[filtered_df["Municipality"] == municipality_filter]
+
+    st.subheader("Filtered Reports")
+    st.dataframe(filtered_df, use_container_width=True)
+
+    # Update Status
+    st.subheader("Update Report Status")
+    report_ids = filtered_df["ReportID"].tolist()
+    if report_ids:
+        selected_report = st.selectbox("Select Report ID", report_ids)
+        new_status = st.selectbox("Select New Status", ["Pending", "In Progress", "Resolved"])
+        if st.button("Save Update"):
+            if update_status(selected_report, new_status):
+                st.success(f"✅ Updated status for Report ID {selected_report}")
+                st.experimental_rerun()
+            else:
+                st.error("⚠️ Failed to update status.")
+
+    # Download CSV
+    st.subheader("Download Reports")
+    csv = filtered_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv, "water_leakage_reports.csv", "text/csv")
+
+# --- DASHBOARD ---
+def dashboard():
+    show_header_footer()
+    st.title("📊 Dashboard Overview")
+    df = load_data()
+    if df.empty:
+        st.info("No reports yet.")
+        return
+
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric("Total Reports", len(df))
+    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
+
+    st.bar_chart(df["Status"].value_counts())
+
+# --- MAIN ---
+def main():
+    if "logged_in" not in st.session_state:
+        st.session_state["logged_in"] = False
+
+    if not st.session_state["logged_in"]:
+        login_page()
+
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to:", ["Dashboard", "Manage Reports", "Logout"])
+
+    if page == "Dashboard":
+        dashboard()
+    elif page == "Manage Reports":
+        manage_reports()
+    elif page == "Logout":
+        st.session_state["logged_in"] = False
+        st.experimental_rerun()
+
+
+if __name__ == "__main__":
+    main()
+
 
