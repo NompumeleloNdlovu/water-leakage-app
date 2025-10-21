@@ -86,20 +86,28 @@ except Exception as e:
     st.error(f"Failed to load Google Sheet: {e}")
     st.stop()
 
+# ------------------ ADMIN SHEET ------------------
+try:
+    admin_sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
+    admins_df = pd.DataFrame(admin_sheet.get_all_records())
+except Exception as e:
+    st.error(f"Failed to load Admin Sheet: {e}")
+    st.stop()
+
 # ------------------ AUTHENTICATION ------------------
 def login_page():
     st.markdown(
-        f"""
-        <div style="background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;">
-            <h1 style="color:white;">Drop Watch SA - Admin Login</h1>
-        </div>
-        """,
+        f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
+        f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>",
         unsafe_allow_html=True
     )
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
     if st.button("Login"):
-        if code == st.secrets["general"]["admin_code"]:
+        admin_info = admins_df[admins_df['AdminCode'] == code]
+        if not admin_info.empty:
             st.session_state.logged_in = True
+            st.session_state.admin_name = admin_info.iloc[0]['AdminName']
+            st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
             st.session_state.page = "Municipal Overview"
         else:
             st.error("Invalid code")
@@ -160,7 +168,7 @@ def municipal_overview_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ------------------ Trend Comparison for all municipalities ------------------
+    # Trend Comparison for all municipalities
     if "Municipality" in df_filtered_range.columns and "DateTime" in df_filtered_range.columns:
         trend_data = df_filtered_range.groupby([df_filtered_range['DateTime'].dt.date, 'Municipality']).size().reset_index(name='Count')
         fig_trend = px.line(
@@ -203,9 +211,7 @@ def dashboard_page():
         fig_bar = px.bar(
             bar_data, x='Leak Type', y='Count',
             color='Leak Type',
-            color_discrete_sequence=[
-                COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
-            ],
+            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
             title="Leak Reports by Type"
         )
         st.plotly_chart(fig_bar, use_container_width=True)
@@ -238,7 +244,15 @@ def manage_reports_page():
     st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
-    for i, row in df.iterrows():
+    admin_muni = st.session_state.admin_municipality
+    df_admin = df[df['Municipality'] == admin_muni]
+
+    if df_admin.empty:
+        st.info("No reports for your municipality.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    for i, row in df_admin.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
             st.write(row)
             current_status = row.get("Status", "Pending")
@@ -304,4 +318,5 @@ else:
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
         manage_reports_page()
+
 
