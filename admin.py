@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
+"""admin.py"""
+
 import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-from PIL import Image
 
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
@@ -14,8 +16,9 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-ADMIN_CODE = "12345"  # Change this to a secure code
+ADMIN_CODE = "12345"  # 🔒 Change this to a secure code
 
+# --- CONNECT TO GOOGLE SHEET ---
 def get_gsheet_client():
     try:
         creds = Credentials.from_service_account_info(
@@ -85,7 +88,8 @@ def show_header_footer():
 def load_data():
     try:
         data = sheet.get_all_records()
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        return df
     except Exception as e:
         st.error(f"⚠️ Failed to load data: {e}")
         return pd.DataFrame()
@@ -94,10 +98,10 @@ def load_data():
 def update_status(index, new_status):
     df = load_data()
     if 0 <= index < len(df):
-        cell = f"H{index + 2}"  # Column H = Status
+        cell = f"H{index + 2}"  # Column H = Status (based on your sheet)
         try:
             sheet.update(cell, new_status)
-            st.cache_data.clear()  # Clear cache so new status shows
+            st.cache_data.clear()
             return True
         except Exception as e:
             st.error(f"⚠️ Failed to update status: {e}")
@@ -130,27 +134,50 @@ def login_page():
 # --- MANAGE REPORTS PAGE ---
 def manage_reports():
     show_header_footer()
-    st.title("Manage Leak Reports")
+    st.title("🧾 Manage Leak Reports")
     df = load_data()
 
     if df.empty:
         st.info("No reports found.")
         return
 
+    # 🔍 Search and filter controls
+    st.markdown("### 🔎 Search & Filter")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        search_query = st.text_input("Search by Name, Municipality, or Location").strip().lower()
+    with col2:
+        status_filter = st.selectbox("Filter by Status", ["All", "Pending", "In Progress", "Resolved"], index=0)
+
+    # 🔎 Apply filters
+    if search_query:
+        df = df[
+            df["Name"].str.lower().str.contains(search_query, na=False) |
+            df["Municipality"].str.lower().str.contains(search_query, na=False) |
+            df["Location"].str.lower().str.contains(search_query, na=False)
+        ]
+    if status_filter != "All":
+        df = df[df["Status"] == status_filter]
+
+    st.write(f"Showing {len(df)} result(s).")
+
+    # 🧾 Display reports
     for i, row in df.iterrows():
-        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
-            st.write(f"**Description:** {row.get('Description', 'N/A')}")
-            st.write(f"**Date:** {row.get('Timestamp', 'N/A')}")
+        with st.expander(f"📍 Report #{row.get('ReportID', i+1)} — {row.get('Location', 'Unknown')}"):
+            st.write(f"**Name:** {row.get('Name', 'N/A')}")
+            st.write(f"**Contact:** {row.get('Contact', 'N/A')}")
+            st.write(f"**Municipality:** {row.get('Municipality', 'N/A')}")
+            st.write(f"**Leak Type:** {row.get('Leak Type', 'N/A')}")
+            st.write(f"**Date Reported:** {row.get('DateTime', 'N/A')}")
             st.write(f"**Status:** {row.get('Status', 'Pending')}")
 
-            image_url = row.get("Image", "")
-            if image_url:
-                if image_url.lower().endswith(('.mp4', '.mov', '.avi')):
-                    st.video(image_url)
-                else:
-                    st.image(image_url, caption="Leak Evidence", use_container_width=True)
+            new_status = st.selectbox(
+                "Update Status", 
+                ["Pending", "In Progress", "Resolved"],
+                index=["Pending", "In Progress", "Resolved"].index(row.get("Status", "Pending")),
+                key=f"status_{i}"
+            )
 
-            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}")
             if st.button("Save Update", key=f"save_{i}"):
                 if update_status(i, new_status):
                     st.success("✅ Status updated successfully!")
@@ -167,10 +194,18 @@ def dashboard():
         st.info("No reports yet.")
         return
 
+    if "Status" not in df.columns:
+        st.warning("⚠️ The 'Status' column is missing from the Google Sheet.")
+        st.dataframe(df.head())
+        return
+
     col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total Reports", len(df))
-    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
+    with col1: 
+        st.metric("Total Reports", len(df))
+    with col2: 
+        st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3: 
+        st.metric("Pending", (df["Status"] == "Pending").sum())
 
     st.bar_chart(df["Status"].value_counts())
 
