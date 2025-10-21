@@ -1,30 +1,24 @@
 # -*- coding: utf-8 -*-
 """Drop Watch SA Admin Panel"""
-
 import streamlit as st
-import gspread
 import pandas as pd
-import json
+import gspread
 from google.oauth2.service_account import Credentials
+import json
 
-# --- PAGE CONFIG ---
+# --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 
-# --- SETTINGS ---
-SHEET_NAME = "WaterLeakReports"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-ADMIN_CODE = "admin123"  # Change this to a secure code
-
-# --- LOAD GOOGLE SHEETS CREDENTIALS ---
+# --- Load Google Sheets credentials from secrets ---
 try:
-    # Load service account JSON from Streamlit secrets
-    creds_json = st.secrets["google"]["service_account"]
-    creds_dict = json.loads(creds_json)
-    # Fix escaped newlines in private key
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    creds_dict = json.loads(st.secrets["google_service_account"])
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"]
+    )
     client = gspread.authorize(creds)
-    sheet = client.open(SHEET_NAME).sheet1
+    sheet = client.open("WaterLeakReports").sheet1
 except KeyError:
     st.error("⚠️ Google service account secret not found. Check Streamlit secrets.")
     st.stop()
@@ -32,18 +26,18 @@ except Exception as e:
     st.error(f"⚠️ Failed to connect to Google Sheets: {e}")
     st.stop()
 
-# --- HEADER & FOOTER ---
+# --- Admin code from secrets ---
+ADMIN_CODE = st.secrets["general"]["admin_code"]
+
+# --- HEADER + FOOTER ---
 def show_header_footer():
     st.markdown("""
     <style>
-        .header {position:fixed;top:0;left:0;width:100%;display:flex;align-items:center;justify-content:center;
-                  gap:12px;background:linear-gradient(90deg,#0d6efd,#0b5ed7);color:white;padding:18px 0;
-                  font-family:'Cinzel', serif;font-weight:600;font-size:26px;box-shadow:0 4px 8px rgba(0,0,0,0.15);z-index:999;}
-        .header img {height:45px;width:auto;border-radius:6px;}
-        .header-spacer {height:90px;}
-        .footer {position:fixed;bottom:0;left:0;width:100%;background:#0d6efd;color:white;text-align:center;
-                 padding:10px 0;font-family:'Cinzel', serif;font-size:14px;box-shadow:0 -2px 6px rgba(0,0,0,0.15);z-index:999;}
-        .footer-spacer {height:40px;}
+    .header {position: fixed; top:0; left:0; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; background:linear-gradient(90deg, #0d6efd, #0b5ed7); color:white; padding:18px 0; font-family: 'Cinzel', serif; font-weight:600; font-size:26px; box-shadow:0 4px 8px rgba(0,0,0,0.15); z-index:999;}
+    .header img {height:45px; width:auto; border-radius:6px;}
+    .header-spacer {height:90px;}
+    .footer {position: fixed; bottom:0; left:0; width:100%; background:#0d6efd; color:white; text-align:center; padding:10px 0; font-family:'Cinzel', serif; font-size:14px; box-shadow:0 -2px 6px rgba(0,0,0,0.15); z-index:999;}
+    .footer-spacer {height:40px;}
     </style>
     <div class="header">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png">
@@ -51,13 +45,12 @@ def show_header_footer():
     </div>
     <div class="header-spacer"></div>
     """, unsafe_allow_html=True)
-
     st.markdown("""
     <div class="footer">&copy; 2025 Drop Watch SA | Water Security Initiative</div>
     <div class="footer-spacer"></div>
     """, unsafe_allow_html=True)
 
-# --- LOAD DATA ---
+# --- Load data ---
 @st.cache_data(ttl=60)
 def load_data():
     try:
@@ -67,44 +60,64 @@ def load_data():
         st.error(f"⚠️ Failed to load data: {e}")
         return pd.DataFrame()
 
-# --- UPDATE STATUS ---
-def update_status(report_id, new_status):
+# --- Update report status ---
+def update_status(index, new_status):
     df = load_data()
-    try:
-        cell = sheet.find(str(report_id))
-        if cell:
-            status_col = df.columns.get_loc("Status") + 1
-            sheet.update_cell(cell.row, status_col, new_status)
+    if 0 <= index < len(df):
+        cell = f"H{index+2}"  # Column H = Status
+        try:
+            sheet.update(cell, new_status)
             st.cache_data.clear()
             return True
-    except Exception as e:
-        st.error(f"⚠️ Failed to update status: {e}")
+        except Exception as e:
+            st.error(f"⚠️ Failed to update status: {e}")
+            return False
     return False
 
-# --- LOGIN PAGE ---
+# --- Login page ---
 def login_page():
     show_header_footer()
-    st.markdown("""
-    <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
-        <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
-            <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
-            <p style='color:#555;'>Administrator Access</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    code = st.text_input("Enter Admin Code:", type="password", key="login_input")
-    if st.button("Login", use_container_width=True):
+    st.markdown("<h2 style='text-align:center; color:#0d6efd;'>Administrator Access</h2>", unsafe_allow_html=True)
+    code = st.text_input("Enter Admin Code:", type="password")
+    if st.button("Login"):
         if code == ADMIN_CODE:
             st.session_state["logged_in"] = True
-            st.success("✅ Login successful! Redirecting...")
+            st.success("✅ Login successful!")
             st.experimental_rerun()
         else:
             st.error("❌ Invalid admin code")
     st.stop()
 
-# --- DASHBOARD ---
+# --- Manage reports ---
+def manage_reports():
+    show_header_footer()
+    st.title("Manage Leak Reports")
+    df = load_data()
+    if df.empty:
+        st.info("No reports found.")
+        return
+
+    for i, row in df.iterrows():
+        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
+            st.write(f"**Description:** {row.get('Description','N/A')}")
+            st.write(f"**Date:** {row.get('Timestamp','N/A')}")
+            st.write(f"**Status:** {row.get('Status','Pending')}")
+            
+            image_url = row.get("Image", "")
+            if image_url:
+                if image_url.lower().endswith(('.mp4','.mov','.avi')):
+                    st.video(image_url)
+                else:
+                    st.image(image_url, caption="Leak Evidence", use_container_width=True)
+
+            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}")
+            if st.button("Save Update", key=f"save_{i}"):
+                if update_status(i, new_status):
+                    st.success("✅ Status updated successfully!")
+                else:
+                    st.error("⚠️ Failed to update status.")
+
+# --- Dashboard ---
 def dashboard():
     show_header_footer()
     st.title("📊 Dashboard Overview")
@@ -112,57 +125,13 @@ def dashboard():
     if df.empty:
         st.info("No reports yet.")
         return
-
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("Total Reports", len(df))
-    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
-
+    with col2: st.metric("Resolved", (df["Status"]=="Resolved").sum())
+    with col3: st.metric("Pending", (df["Status"]=="Pending").sum())
     st.bar_chart(df["Status"].value_counts())
 
-# --- MANAGE REPORTS ---
-def manage_reports():
-    show_header_footer()
-    st.title("Manage Leak Reports")
-    df = load_data()
-
-    if df.empty:
-        st.info("No reports found.")
-        return
-
-    # Sidebar Filters
-    st.sidebar.header("Filter Reports")
-    status_filter = st.sidebar.selectbox("Status", ["All"] + list(df["Status"].unique()))
-    municipality_filter = st.sidebar.selectbox("Municipality", ["All"] + list(df["Municipality"].unique()))
-
-    filtered_df = df.copy()
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df["Status"] == status_filter]
-    if municipality_filter != "All":
-        filtered_df = filtered_df[filtered_df["Municipality"] == municipality_filter]
-
-    st.subheader("Filtered Reports")
-    st.dataframe(filtered_df, use_container_width=True)
-
-    # Update Status
-    st.subheader("Update Report Status")
-    report_ids = filtered_df["ReportID"].tolist()
-    if report_ids:
-        selected_report = st.selectbox("Select Report ID", report_ids)
-        new_status = st.selectbox("Select New Status", ["Pending", "In Progress", "Resolved"])
-        if st.button("Save Update"):
-            if update_status(selected_report, new_status):
-                st.success(f"✅ Updated status for Report ID {selected_report}")
-                st.experimental_rerun()
-            else:
-                st.error("⚠️ Failed to update status.")
-
-    # Download CSV
-    st.subheader("Download Reports")
-    csv = filtered_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, "water_leakage_reports.csv", "text/csv")
-
-# --- MAIN ---
+# --- Main ---
 def main():
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
@@ -170,17 +139,14 @@ def main():
     if not st.session_state["logged_in"]:
         login_page()
 
-    st.sidebar.title("Navigation")
+    st.sidebar.title("🔧 Navigation")
     page = st.sidebar.radio("Go to:", ["Dashboard", "Manage Reports", "Logout"])
-
-    if page == "Dashboard":
-        dashboard()
-    elif page == "Manage Reports":
-        manage_reports()
+    if page == "Dashboard": dashboard()
+    elif page == "Manage Reports": manage_reports()
     elif page == "Logout":
         st.session_state["logged_in"] = False
         st.experimental_rerun()
 
-
 if __name__ == "__main__":
     main()
+
