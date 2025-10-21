@@ -21,37 +21,24 @@ COLORS = {
 st.set_page_config(
     page_title="Drop Watch Admin",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# ------------------ SIDEBAR ------------------
-st.sidebar.markdown(
-    f"""
-    <div style="background-color:{COLORS['teal_blue']};padding:20px;border-radius:10px;">
-        <h2 style="color:white;text-align:center;">Drop Watch</h2>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+    <style>
+    /* Background */
+    .stApp {{
+        background-color: {COLORS['white_smoke']};
+    }}
+    /* Hide hamburger menu and footer */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    </style>
+""", unsafe_allow_html=True)
 
-# ------------------ SIDEBAR NAVIGATION ------------------
-page = st.sidebar.radio(
-    "Navigation",
-    ["Dashboard", "Manage Reports"]
-)
-
-# ------------------ AUTHENTICATION ------------------
-def admin_login():
-    code = st.sidebar.text_input("Enter Admin Code", type="password")
-    if code == st.secrets["general"]["admin_code"]:
-        st.sidebar.success("Login successful!")
-        return True
-    elif code:
-        st.sidebar.error("Invalid code")
-    return False
-
-if not admin_login():
-    st.stop()
+# ------------------ SESSION STATE ------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
 # ------------------ GOOGLE SHEET ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
@@ -64,21 +51,38 @@ try:
     sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
     records = sheet.get_all_records()
     df = pd.DataFrame(records)
+    df.columns = df.columns.str.strip()  # remove extra spaces
 except Exception as e:
     st.error(f"Failed to load Google Sheet: {e}")
     st.stop()
 
-# Clean column names
-df.columns = df.columns.str.strip()
-
-# ------------------ DASHBOARD PAGE ------------------
-def show_dashboard():
+# ------------------ MODERN LOGIN PAGE ------------------
+def login_page():
     st.markdown(
-        f"<div style='background-color:{COLORS['white_smoke']};padding:10px;border-radius:10px;'>",
+        f"""
+        <div style="display:flex;justify-content:center;align-items:center;height:80vh;">
+            <div style="background-color:white;padding:50px;border-radius:15px;box-shadow:0 8px 16px rgba(0,0,0,0.2);width:400px;">
+                <h2 style="text-align:center;color:{COLORS['teal_blue']};margin-bottom:30px;">Drop Watch Admin Login</h2>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
+    with st.form("login_form", clear_on_submit=False):
+        code = st.text_input("Admin Code", placeholder="Enter your admin code", type="password")
+        submitted = st.form_submit_button("Login", help="Click to login")
+        if submitted:
+            if code == st.secrets["general"]["admin_code"]:
+                st.session_state.logged_in = True
+                st.experimental_rerun()
+            else:
+                st.error("Invalid admin code")
 
-    # Metrics
+# ------------------ DASHBOARD ------------------
+def show_dashboard():
+    st.markdown(
+        f"<h2 style='color:{COLORS['teal_blue']}'>Dashboard</h2>", unsafe_allow_html=True
+    )
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Total Reports", len(df))
@@ -87,60 +91,50 @@ def show_dashboard():
     with col3:
         st.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # Bar Chart: Leak Type
-    if "Leak Type" in df.columns:
-        bar_data = df['Leak Type'].value_counts().reset_index()
-        bar_data.columns = ['Leak Type', 'Count']
-        fig_bar = px.bar(
-            bar_data,
-            x='Leak Type',
-            y='Count',
-            color='Leak Type',
-            color_discrete_sequence=[
-                COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
-            ],
-            title="Leak Reports by Type"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Pie Chart: Status
-    if "Status" in df.columns:
-        pie_data = df['Status'].value_counts().reset_index()
-        pie_data.columns = ['Status', 'Count']
-        fig_pie = px.pie(
-            pie_data,
-            names='Status',
-            values='Count',
-            color='Status',
-            color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-            title="Reports by Status"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-    # Timeline: Reports over Time
-    if "DateTime" in df.columns:
-        df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
-        time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
-        fig_time = px.line(
-            time_data,
-            x='DateTime',
-            y='Count',
-            title="Reports Over Time",
-            markers=True,
-            color_discrete_sequence=[COLORS['teal_blue']]
-        )
-        st.plotly_chart(fig_time, use_container_width=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ------------------ MANAGE REPORTS PAGE ------------------
-def manage_reports():
-    st.markdown(
-        f"<div style='background-color:{COLORS['powder_blue']};padding:10px;border-radius:10px;margin-top:10px;'>",
-        unsafe_allow_html=True
+    # Bar Chart
+    bar_data = df['Leak Type'].value_counts().reset_index()
+    bar_data.columns = ['Leak Type', 'Count']
+    fig_bar = px.bar(
+        bar_data,
+        x='Leak Type',
+        y='Count',
+        color='Leak Type',
+        color_discrete_sequence=[
+            COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
+        ],
+        title="Leak Reports by Type"
     )
-    st.markdown("## Manage Reports")
+    st.plotly_chart(fig_bar, use_container_width=True)
 
+    # Pie Chart
+    pie_data = df['Status'].value_counts().reset_index()
+    pie_data.columns = ['Status', 'Count']
+    fig_pie = px.pie(
+        pie_data,
+        names='Status',
+        values='Count',
+        color='Status',
+        color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+        title="Reports by Status"
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+    # Timeline
+    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
+    time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+    fig_time = px.line(
+        time_data,
+        x='DateTime',
+        y='Count',
+        title="Reports Over Time",
+        markers=True,
+        color_discrete_sequence=[COLORS['teal_blue']]
+    )
+    st.plotly_chart(fig_time, use_container_width=True)
+
+# ------------------ MANAGE REPORTS ------------------
+def manage_reports():
+    st.markdown(f"<h2 style='color:{COLORS['teal_blue']}'>Manage Reports</h2>", unsafe_allow_html=True)
     for i, row in df.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
             st.write(row)
@@ -162,20 +156,25 @@ def manage_reports():
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+# ------------------ MAIN ------------------
+if not st.session_state.logged_in:
+    login_page()
+else:
+    st.sidebar.markdown(
+        f"<div style='background-color:{COLORS['teal_blue']};padding:20px;border-radius:10px;'>"
+        f"<h2 style='color:white;text-align:center;'>Drop Watch</h2></div>",
+        unsafe_allow_html=True
+    )
 
-# ------------------ PAGE ROUTING ------------------
-if page == "Dashboard":
-    show_dashboard()
-elif page == "Manage Reports":
-    manage_reports()
+    page = st.sidebar.radio(
+        "Navigation",
+        ["Dashboard", "Manage Reports", "Logout"]
+    )
 
-# ------------------ FOOTER ------------------
-st.markdown(
-    f"""
-    <div style="background-color:{COLORS['moonstone_blue']};padding:10px;border-radius:10px;margin-top:10px;">
-        <p style="text-align:center;color:black;">&copy; 2025 Drop Watch</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    if page == "Dashboard":
+        show_dashboard()
+    elif page == "Manage Reports":
+        manage_reports()
+    elif page == "Logout":
+        st.session_state.logged_in = False
+        st.experimental_rerun()
