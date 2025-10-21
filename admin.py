@@ -181,8 +181,9 @@ if st.session_state.logged_in:
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
     login_page()
-    if st.session_state.rerun_after_login:
-        st.session_state.rerun_after_login = False
+    # Safe rerun: only trigger after login_page has executed fully
+    if st.session_state.get("rerun_after_login", False):
+        st.session_state["rerun_after_login"] = False
         st.experimental_rerun()
 else:
     if st.session_state.page == "Dashboard":
