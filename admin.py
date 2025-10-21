@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import plotly.express as px
+import base64
 
 # ------------------ SECRETS & CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -32,6 +33,29 @@ if "page" not in st.session_state:
 if "rerun_after_login" not in st.session_state:
     st.session_state.rerun_after_login = False
 
+# ------------------ BACKGROUND IMAGE ------------------
+def set_background_local(image_path):
+    with open(image_path, "rb") as f:
+        data = f.read()
+    encoded = base64.b64encode(data).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Set your background image
+set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
+
 # ------------------ GOOGLE SHEET ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
@@ -51,8 +75,8 @@ except Exception as e:
 def login_page():
     st.markdown(
         f"""
-        <div style="background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;">
-            <h1 style="text-align:center;color:white;">Drop Watch SA - Admin Login</h1>
+        <div style="background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;">
+            <h1 style="color:white;">Drop Watch SA - Admin Login</h1>
         </div>
         """,
         unsafe_allow_html=True
@@ -69,15 +93,12 @@ def login_page():
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
     st.markdown(
-        f"""
-        <div style="background-color:{COLORS['moonstone_blue']};padding:15px;border-radius:10px;margin-bottom:10px;">
-            <h1 style="color:black;text-align:center;">Drop Watch SA - Dashboard</h1>
-        </div>
-        """,
+        f"<div style='background-color: rgba(115,169,194,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+        f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard</h1></div>",
         unsafe_allow_html=True
     )
 
-    st.markdown(f"<div style='background-color:{COLORS['white_smoke']};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -132,7 +153,7 @@ def dashboard_page():
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
-    st.markdown(f"<div style='background-color:{COLORS['powder_blue']};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     for i, row in df.iterrows():
@@ -162,7 +183,7 @@ def manage_reports_page():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------------ CUSTOM SIDEBAR (fixed on the left) ------------------
+# ------------------ SIDEBAR ------------------
 def custom_sidebar():
     st.sidebar.markdown(
         f"<div style='background-color:{COLORS['moonstone_blue']};padding:15px;border-radius:10px;text-align:center;'>"
@@ -170,7 +191,6 @@ def custom_sidebar():
         unsafe_allow_html=True
     )
 
-    # Sidebar buttons using st.sidebar
     if st.sidebar.button("Dashboard"):
         st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"):
@@ -179,7 +199,6 @@ def custom_sidebar():
         st.session_state.logged_in = False
         st.session_state.page = "Login"
         st.experimental_rerun()
-
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
