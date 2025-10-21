@@ -75,23 +75,24 @@ scopes = ["https://www.googleapis.com/auth/spreadsheets",
 creds = Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=scopes)
 client = gspread.authorize(creds)
 
+# Load main reports sheet
 try:
     sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
     records = sheet.get_all_records()
     df = pd.DataFrame(records)
-    df.columns = df.columns.str.strip()
+    df.columns = [str(col).strip() for col in df.columns]  # clean column names
     if "DateTime" in df.columns:
         df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
 except Exception as e:
     st.error(f"Failed to load Google Sheet: {e}")
     st.stop()
 
-# ------------------ ADMIN SHEET ------------------
+# Load admin sheet
 try:
     admin_sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
     admins_df = pd.DataFrame(admin_sheet.get_all_records())
-    # ------------------ CLEAN COLUMN NAMES ------------------
-    admins_df.columns = admins_df.columns.str.strip()  # remove spaces
+    # Convert column names to string and strip spaces
+    admins_df.columns = [str(col).strip() for col in admins_df.columns]
 except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
     st.stop()
@@ -105,7 +106,6 @@ def login_page():
     )
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
     if st.button("Login"):
-        # Use cleaned column names
         admin_info = admins_df[admins_df['AdminCode'] == code]
         if not admin_info.empty:
             st.session_state.logged_in = True
