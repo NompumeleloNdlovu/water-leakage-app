@@ -80,7 +80,7 @@ try:
     sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
     records = sheet.get_all_records()
     df = pd.DataFrame(records)
-    df.columns = [str(col).strip() for col in df.columns]  # clean column names
+    df.columns = [str(col).strip() for col in df.columns]
     if "DateTime" in df.columns:
         df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
 except Exception as e:
@@ -92,7 +92,6 @@ try:
     admin_sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
     admins_df = pd.DataFrame(admin_sheet.get_all_records())
     admins_df.columns = [str(col).strip() for col in admins_df.columns]
-    # Ensure AdminCode is string and stripped
     admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()
 except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
@@ -180,6 +179,102 @@ def municipal_overview_page():
             color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']]
         )
         st.plotly_chart(fig_trend, use_container_width=True)
+
+# ------------------ DASHBOARD ------------------
+def dashboard_page():
+    st.markdown(
+        f"<div style='background-color: rgba(115,169,194,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+        f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard (All Municipalities)</h1></div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df))
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df["Status"] == "Pending").sum())
+
+    if "Municipality" in df.columns:
+        top_munis = df['Municipality'].value_counts().head(3)
+        st.markdown("### Top 3 Municipalities by Report Count")
+        top_cols = st.columns(3)
+        for idx, (muni, count) in enumerate(top_munis.items()):
+            top_cols[idx].metric(muni, count)
+
+    if "Leak Type" in df.columns:
+        bar_data = df['Leak Type'].value_counts().reset_index()
+        bar_data.columns = ['Leak Type', 'Count']
+        fig_bar = px.bar(
+            bar_data, x='Leak Type', y='Count',
+            color='Leak Type',
+            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+            title="Leak Reports by Type"
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    if "Status" in df.columns:
+        pie_data = df['Status'].value_counts().reset_index()
+        pie_data.columns = ['Status', 'Count']
+        fig_pie = px.pie(
+            pie_data, names='Status', values='Count',
+            color='Status',
+            color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+            title="Status Breakdown"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    if "DateTime" in df.columns:
+        time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+        fig_time = px.line(time_data, x='DateTime', y='Count',
+                           title="Reports Over Time",
+                           markers=True,
+                           color_discrete_sequence=[COLORS['teal_blue']])
+        st.plotly_chart(fig_time, use_container_width=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ------------------ MANAGE REPORTS ------------------
+def manage_reports_page():
+    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
+        st.warning("Please log in to view this page.")
+        return
+
+    st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;margin-top:10px;'>", unsafe_allow_html=True)
+    st.markdown("## Manage Reports")
+
+    admin_muni = st.session_state.admin_municipality
+    df_admin = df[df['Municipality'] == admin_muni]
+
+    if df_admin.empty:
+        st.info("No reports for your municipality.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    for i, row in df_admin.iterrows():
+        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
+            st.write(row)
+            current_status = row.get("Status", "Pending")
+            options = ["Pending", "Resolved"]
+            if current_status not in options:
+                current_status = "Pending"
+
+            new_status = st.selectbox(
+                "Update Status",
+                options,
+                index=options.index(current_status),
+                key=f"status_{i}"
+            )
+
+            if st.button("Update", key=f"update_{i}"):
+                try:
+                    cell = sheet.find(str(row['ReportID']))
+                    sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
+                    st.success(f"Status updated to {new_status}")
+                    df.at[i, "Status"] = new_status
+                except Exception as e:
+                    st.error(f"Failed to update status: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
