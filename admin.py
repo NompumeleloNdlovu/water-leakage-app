@@ -62,7 +62,7 @@ def login_page():
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
             st.session_state.page = "Dashboard"
-            st.session_state.rerun_after_login = True  # set a flag instead of rerunning here
+            st.session_state.rerun_after_login = True
         else:
             st.error("Invalid code")
 
@@ -138,16 +138,19 @@ def manage_reports_page():
     for i, row in df.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
             st.write(row)
-            current_status = row["Status"]
-            try:
-                new_status = st.selectbox(
-                    "Update Status",
-                    ["Pending", "Resolved"],
-                    index=["Pending", "Resolved"].index(current_status),
-                    key=f"status_{i}"
-                )
-            except ValueError:
-                new_status = current_status
+            # ---------------- FIXED STATUS DROPDOWN ----------------
+            current_status = row.get("Status", "Pending")  # ensure status exists
+            options = ["Pending", "Resolved"]
+            if current_status not in options:
+                current_status = "Pending"  # fallback for unknown status
+
+            new_status = st.selectbox(
+                "Update Status",
+                options,
+                index=options.index(current_status),
+                key=f"status_{i}"
+            )
+
             if st.button("Update", key=f"update_{i}"):
                 try:
                     cell = sheet.find(str(row['ReportID']))
@@ -155,6 +158,7 @@ def manage_reports_page():
                     st.success(f"Status updated to {new_status}")
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
+            # -------------------------------------------------------
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -177,7 +181,6 @@ if st.session_state.logged_in:
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
     login_page()
-    # Rerun if login was successful
     if st.session_state.rerun_after_login:
         st.session_state.rerun_after_login = False
         st.experimental_rerun()
