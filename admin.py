@@ -1,79 +1,68 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
+import matplotlib.pyplot as plt
+from datetime import datetime
 
-# ---------------- COLOR PALETTE ----------------
-COLORS = {
-    "teal_blue": "#008080",
-    "moonstone_blue": "#73A9C2",
-    "powder_blue": "#B0E0E6",
-    "magic_mint": "#AAF0D1",
-    "white_smoke": "#F5F5F5"
+# -----------------------
+# Google Sheets Setup
+# -----------------------
+SCOPE = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+credentials = Credentials.from_service_account_info(
+    st.secrets["google_service_account"],
+    scopes=SCOPE
+)
+client = gspread.authorize(credentials)
+
+# Sheet info
+SHEET_NAME = "Sheet1"
+sheet = client.open("WaterLeakReports").worksheet(SHEET_NAME)
+
+# -----------------------
+# Squilla Fund Colors
+# -----------------------
+PALETTE = {
+    "TEAL_BLUE": "#008080",
+    "MOONSTONE_BLUE": "#73A9C2",
+    "POWDER_BLUE": "#B0E0E6",
+    "MAGIC_MINT": "#AAF0D1",
+    "WHITE_SMOKE": "#F5F5F5"
 }
 
-# ---------------- STREAMLIT PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Drop Watch",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# ---------------- CUSTOM STYLING ----------------
-st.markdown(
-    f"""
-    <style>
-        /* Page background */
-        .stApp {{
-            background-color: {COLORS['white_smoke']};
-            color: black;
-        }}
-        /* Sidebar background */
-        [data-testid="stSidebar"] {{
-            background-color: {COLORS['teal_blue']};
-            color: black;
-        }}
-        /* Headers */
-        .css-18e3th9 {{
-            color: black;
-        }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ---------------- GOOGLE SHEETS SETUP ----------------
-SHEET_NAME = "Sheet1"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
-          "https://www.googleapis.com/auth/drive"]
-
-creds = Credentials.from_service_account_info(st.secrets["google_service_account"], scopes=SCOPES)
-client = gspread.authorize(creds)
-
-try:
-    sheet = client.open("WaterLeakReports").worksheet(SHEET_NAME)
+# -----------------------
+# Load Data
+# -----------------------
+@st.cache_data
+def load_data():
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-except Exception as e:
-    st.error(f"Failed to load Google Sheet: {e}")
-    st.stop()
+    df.columns = df.columns.str.strip()
+    return df
 
-# ---------------- LOGIN ----------------
-def login_page():
-    st.title("Drop Watch Admin Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username == st.secrets["general"]["admin_code"] and password == st.secrets["general"]["admin_code"]:
-            st.session_state["logged_in"] = True
-            st.experimental_rerun()
-        else:
-            st.error("Invalid credentials")
+# -----------------------
+# Update Status
+# -----------------------
+def update_status(df, row_index, new_status):
+    try:
+        status_col_index = df.columns.get_loc("Status") + 1
+        sheet.update_cell(row_index + 2, status_col_index, new_status)
+        st.success("Status updated successfully!")
+        return True
+    except Exception as e:
+        st.error(f"Failed to update status: {e}")
+        return False
 
-# ---------------- DASHBOARD ----------------
+# -----------------------
+# Dashboard
+# -----------------------
 def dashboard():
-    st.header("Dashboard")
+    st.title("Admin Dashboard")
+    df = load_data()
 
     # Metrics
     col1, col2, col3 = st.columns(3)
@@ -81,92 +70,69 @@ def dashboard():
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # Bar chart: Leak Type
-    if "Leak Type" in df.columns:
-        bar_data = df["Leak Type"].value_counts().reset_index()
-        fig_bar = px.bar(
-            bar_data,
-            x="index",
-            y="Leak Type",
-            color="index",
-            color_discrete_sequence=[COLORS["moonstone_blue"], COLORS["powder_blue"], COLORS["magic_mint"]],
-            labels={"index":"Leak Type", "Leak Type":"Count"},
-            title="Leak Reports by Type"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-    else:
-        st.warning("Column 'Leak Type' not found in Google Sheet.")
+    # -----------------------
+    # Bar Chart: Leak Types
+    # -----------------------
+    st.subheader("Leak Types")
+    leak_counts = df["Leak Type"].value_counts()
+    fig, ax = plt.subplots()
+    ax.bar(leak_counts.index, leak_counts.values, color=list(PALETTE.values())[:len(leak_counts)])
+    ax.set_ylabel("Number of Reports")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-    # Pie chart: Status
-    if "Status" in df.columns:
-        pie_data = df["Status"].value_counts().reset_index()
-        fig_pie = px.pie(
-            pie_data,
-            names="index",
-            values="Status",
-            color="index",
-            color_discrete_sequence=[COLORS["moonstone_blue"], COLORS["magic_mint"]],
-            title="Reports by Status"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-    else:
-        st.warning("Column 'Status' not found in Google Sheet.")
+    # -----------------------
+    # Pie Chart: Status Distribution
+    # -----------------------
+    st.subheader("Status Distribution")
+    status_counts = df["Status"].value_counts()
+    fig, ax = plt.subplots()
+    ax.pie(
+        status_counts,
+        labels=status_counts.index,
+        autopct="%1.1f%%",
+        startangle=90,
+        colors=list(PALETTE.values())[:len(status_counts)]
+    )
+    ax.axis("equal")
+    st.pyplot(fig)
 
-    # Time series chart
-    if "DateTime" in df.columns:
-        df_time = df.groupby("DateTime").size().reset_index(name="Count")
-        fig_time = px.line(
-            df_time,
-            x="DateTime",
-            y="Count",
-            title="Reports Over Time",
-            markers=True,
-            color_discrete_sequence=[COLORS['moonstone_blue']]
-        )
-        st.plotly_chart(fig_time, use_container_width=True)
-    else:
-        st.warning("Column 'DateTime' not found in Google Sheet.")
+    # -----------------------
+    # Time Series Chart: Reports Over Time
+    # -----------------------
+    st.subheader("Reports Over Time")
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+    time_data = df.groupby(df["DateTime"].dt.date).size()
+    st.line_chart(time_data)
 
-# ---------------- MANAGE REPORTS ----------------
+# -----------------------
+# Manage Reports
+# -----------------------
 def manage_reports():
-    st.header("Manage Reports")
+    st.title("Manage Reports")
+    df = load_data()
+
     for i, row in df.iterrows():
-        with st.expander(f"Report #{row.get('ReportID', i+1)} — {row.get('Location','Unknown')}"):
+        location = row.get("Location", "Unknown")
+        report_id = row.get("ReportID", i+1)
+        with st.expander(f"Report #{report_id} — {location}"):
             st.write(row)
-            status = row.get("Status", "Pending")
-            new_status = st.selectbox(
-                "Update Status",
-                ["Pending", "Resolved"],
-                index=["Pending", "Resolved"].index(status) if status in ["Pending", "Resolved"] else 0,
-                key=f"status_{i}"
-            )
-            if st.button("Update", key=f"update_{i}"):
-                try:
-                    cell = sheet.find(str(row["ReportID"])).address.replace("A", "H")  # Assuming Status is column H
-                    sheet.update(cell, new_status)
-                    st.success("Status updated")
-                except Exception as e:
-                    st.error(f"Failed to update status: {e}")
+            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=i)
+            if st.button("Update Status", key=f"btn_{i}"):
+                update_status(df, i, new_status)
 
-# ---------------- MAIN ----------------
+# -----------------------
+# Sidebar Navigation
+# -----------------------
 def main():
-    if "logged_in" not in st.session_state:
-        st.session_state["logged_in"] = False
+    st.sidebar.title("Admin Panel")
+    menu = ["Dashboard", "Manage Reports"]
+    choice = st.sidebar.radio("Go to", menu)
 
-    if not st.session_state["logged_in"]:
-        login_page()
-    else:
-        st.sidebar.title("Navigation")
-        page = st.sidebar.radio("Go to", ["Dashboard", "Manage Reports", "Logout"])
+    if choice == "Dashboard":
+        dashboard()
+    elif choice == "Manage Reports":
+        manage_reports()
 
-        if page == "Dashboard":
-            dashboard()
-        elif page == "Manage Reports":
-            manage_reports()
-        elif page == "Logout":
-            st.session_state["logged_in"] = False
-            st.experimental_rerun()
-
-# ---------------- RUN ----------------
 if __name__ == "__main__":
     main()
