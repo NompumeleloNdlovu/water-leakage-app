@@ -1,131 +1,93 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 import plotly.express as px
 
-# -------------------------
-# Google Sheets Authentication
-# -------------------------
-SHEET_NAME = "Sheet1"
-
-scopes = ["https://www.googleapis.com/auth/spreadsheets",
-          "https://www.googleapis.com/auth/drive"]
-
-creds_dict = st.secrets["google_service_account"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-client = gspread.authorize(creds)
-
-sheet = client.open("WaterLeakReports").worksheet(SHEET_NAME)
-
-# -------------------------
-# Squilla Fund color palette
-# -------------------------
+# --- Squilla Fund Color Palette ---
 PALETTE = {
-    "teal_blue": "#008080",
-    "moonstone_blue": "#73A9C2",
-    "powder_blue": "#B0E0E6",
-    "magic_mint": "#AAF0D1",
-    "white_smoke": "#F5F5F5"
+    "TEAL_BLUE": "#008080",
+    "MOONSTONE_BLUE": "#73A9C2",
+    "POWDER_BLUE": "#B0E0E6",
+    "MAGIC_MINT": "#AAF0D1",
+    "WHITE_SMOKE": "#F5F5F5"
 }
-bar_colors = [PALETTE["teal_blue"], PALETTE["moonstone_blue"], PALETTE["powder_blue"], PALETTE["magic_mint"]]
+bar_colors = [PALETTE["TEAL_BLUE"], PALETTE["MOONSTONE_BLUE"], 
+              PALETTE["POWDER_BLUE"], PALETTE["MAGIC_MINT"]]
 
-# -------------------------
-# App style
-# -------------------------
-st.set_page_config(page_title="Water Leakage Admin", layout="wide")
-st.markdown(
-    f"""
-    <style>
-    .reportview-container {{
-        background-color: {PALETTE['white_smoke']};
-        color: black;
-    }}
-    .sidebar .sidebar-content {{
-        background-color: {PALETTE['teal_blue']};
-        color: black;
-    }}
-    .stButton>button {{
-        background-color: {PALETTE['moonstone_blue']};
-        color: black;
-    }}
-    .stMetric-value {{
-        color: black;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# -------------------------
-# Load data from Google Sheets
-# -------------------------
-@st.cache_data
-def load_data():
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    df.columns = [col.strip() for col in df.columns]  # normalize column names
-    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')  # safe datetime
-    return df
-
-# -------------------------
-# Dashboard
-# -------------------------
+# --- Dashboard function ---
 def dashboard():
-    df = load_data()
+    st.set_page_config(page_title="Water Leakage Admin Dashboard", layout="wide")
+    
+    # Custom background and sidebar colors
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: {PALETTE['WHITE_SMOKE']};
+            color: black;
+        }}
+        .css-1d391kg {{
+            background-color: {PALETTE['TEAL_BLUE']} !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown(f"<h1 style='color:{PALETTE['teal_blue']}'>Water Leakage Admin Dashboard</h1>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    # Metrics cards with palette
+    st.title("Water Leakage Admin Dashboard")
+    
+    # --- Load data from Google Sheet ---
+    df = load_data()  # Replace with your existing function to read Google Sheet
+    
+    if df.empty:
+        st.warning("No data available.")
+        return
+    
+    # --- KPI Metrics ---
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df))
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] != "Resolved").sum())
-
-    st.markdown("---")
-
-    # Bar chart: Leak Type
+    
+    # --- Bar Chart: Leak Types ---
+    bar_data = df['Leak Type'].value_counts().reset_index()
+    bar_data.columns = ['Leak Type', 'Count']
+    
     fig_bar = px.bar(
-        df['Leak Type'].value_counts().reset_index(),
-        x='index', y='Leak Type',
-        color='index',
+        bar_data,
+        x='Leak Type',
+        y='Count',
+        color='Leak Type',
         color_discrete_sequence=bar_colors,
-        labels={'index':'Leak Type', 'Leak Type':'Count'},
         title="Leak Reports by Type"
     )
     st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Pie chart: Status
-    status_counts = df['Status'].value_counts().reset_index()
+    
+    # --- Pie Chart: Status ---
+    pie_data = df['Status'].value_counts().reset_index()
+    pie_data.columns = ['Status', 'Count']
+    
     fig_pie = px.pie(
-        status_counts,
-        names='index',
-        values='Status',
-        color_discrete_sequence=bar_colors,
+        pie_data,
+        names='Status',
+        values='Count',
+        color='Status',
+        color_discrete_sequence=[PALETTE["TEAL_BLUE"], PALETTE["MOONSTONE_BLUE"]],
         title="Report Status Distribution"
     )
     st.plotly_chart(fig_pie, use_container_width=True)
-
-    # Time chart: Reports over time
-    time_counts = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+    
+    # --- Line/Time Chart: Reports Over Time ---
+    df['DateTime'] = pd.to_datetime(df['DateTime'])
+    time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+    
     fig_time = px.line(
-        time_counts,
-        x='DateTime', y='Count',
+        time_data,
+        x='DateTime',
+        y='Count',
         title="Reports Over Time",
-        markers=True,
-        color_discrete_sequence=[PALETTE["teal_blue"]]
+        line_shape='linear',
+        markers=True
     )
+    fig_time.update_traces(line_color=PALETTE["MAGIC_MINT"])
     st.plotly_chart(fig_time, use_container_width=True)
 
-# -------------------------
-# Main
-# -------------------------
-def main():
-    # Sidebar navigation
-    page = st.sidebar.radio("Navigation", ["Dashboard"])
-    if page == "Dashboard":
-        dashboard()
-
-if __name__ == "__main__":
-    main()
