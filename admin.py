@@ -174,7 +174,7 @@ def manage_reports_page():
             st.write(row)
 
             current_status = row.get("Status", "Pending")
-            options = ["Pending", "Resolved"]
+            options = ["Pending", "Resolved", "Rejected"]
             if current_status not in options:
                 current_status = "Pending"
 
