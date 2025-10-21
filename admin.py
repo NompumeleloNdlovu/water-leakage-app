@@ -16,8 +16,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 ADMIN_CODE = "admin123"  # Change this to your own secret admin code
 
 # --- LOAD CREDENTIALS SECURELY FROM STREAMLIT SECRETS ---
-creds_dict = json.loads(st.secrets["google"]["service_account"])
-creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+st.write(st.secrets["google"].keys())  # Should output: ['service_account']
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).sheet1
 
