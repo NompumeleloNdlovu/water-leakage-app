@@ -3,7 +3,6 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import matplotlib.pyplot as plt
-import seaborn as sns
 from datetime import datetime
 
 # -----------------------
@@ -14,7 +13,6 @@ SCOPE = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Connect using secrets
 credentials = Credentials.from_service_account_info(
     st.secrets["google_service_account"],
     scopes=SCOPE
@@ -22,7 +20,7 @@ credentials = Credentials.from_service_account_info(
 client = gspread.authorize(credentials)
 
 # Sheet info
-SHEET_NAME = "Sheet1"  # Name of the sheet inside the Google Sheets file
+SHEET_NAME = "Sheet1"
 sheet = client.open("WaterLeakReports").worksheet(SHEET_NAME)
 
 # -----------------------
@@ -43,7 +41,7 @@ PALETTE = {
 def load_data():
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    df.columns = df.columns.str.strip()  # Remove extra spaces
+    df.columns = df.columns.str.strip()
     return df
 
 # -----------------------
@@ -77,8 +75,11 @@ def dashboard():
     # -----------------------
     st.subheader("Leak Types")
     leak_counts = df["Leak Type"].value_counts()
-    sns.set_palette(list(PALETTE.values())[:-1])  # exclude white smoke
-    st.bar_chart(leak_counts)
+    fig, ax = plt.subplots()
+    ax.bar(leak_counts.index, leak_counts.values, color=list(PALETTE.values())[:len(leak_counts)])
+    ax.set_ylabel("Number of Reports")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
     # -----------------------
     # Pie Chart: Status Distribution
