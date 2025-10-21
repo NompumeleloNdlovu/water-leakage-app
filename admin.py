@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # -----------------------------
 # Google Sheets Setup
@@ -29,21 +29,24 @@ PALETTE = {
     "WHITE_SMOKE": "#F5F5F5"
 }
 
-# Apply background, header, and sidebar colors
+# -----------------------------
+# Page Config & Styling
+# -----------------------------
 st.set_page_config(page_title="Water Leakage Admin", layout="wide")
 
+# Sidebar & background styling
 st.markdown(f"""
     <style>
+    .css-1d391kg {{
+        background-color: {PALETTE['TEAL_BLUE']} !important;
+        color: white !important;
+    }}
     .stApp {{
         background-color: {PALETTE['WHITE_SMOKE']};
+        color: black;
     }}
-    .css-18e3th9 {{
-        background-color: {PALETTE['POWDER_BLUE']};
-    }}
-    .css-1d391kg {{
-        background-color: {PALETTE['TEAL_BLUE']};
-        color: white;
-        font-weight: bold;
+    .st-bf {{
+        color: black;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -54,8 +57,8 @@ st.markdown(f"""
 def load_data():
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    # remove any leading/trailing whitespace from column names
     df.columns = df.columns.str.strip()
+    df['DateTime'] = pd.to_datetime(df['DateTime'])
     return df
 
 df = load_data()
@@ -77,42 +80,43 @@ def update_status(row_index, new_status):
 # -----------------------------
 def dashboard():
     st.title("Water Leakage Reports Dashboard")
-    
+
     # Metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df))
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] != "Resolved").sum())
-    
+
     # Bar Chart: Leak Type
     st.subheader("Leak Type Distribution")
-    bar_colors = [PALETTE["TEAL_BLUE"], PALETTE["MOONSTONE_BLUE"], PALETTE["POWDER_BLUE"], PALETTE["MAGIC_MINT"]]
-    plt.figure(figsize=(8,5))
-    df['Leak Type'].value_counts().plot(kind='bar', color=bar_colors)
-    plt.xlabel("Leak Type")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45)
-    st.pyplot(plt)
-    plt.clf()
-    
+    bar_colors = [PALETTE["TEAL_BLUE"], PALETTE["MOONSTONE_BLUE"],
+                  PALETTE["POWDER_BLUE"], PALETTE["MAGIC_MINT"]]
+    fig_bar = px.bar(df['Leak Type'].value_counts().reset_index(),
+                     x='index', y='Leak Type',
+                     color='index',
+                     color_discrete_sequence=bar_colors,
+                     labels={'index':'Leak Type', 'Leak Type':'Count'})
+    st.plotly_chart(fig_bar, use_container_width=True)
+
     # Pie Chart: Status
     st.subheader("Report Status")
-    status_counts = df['Status'].value_counts()
-    plt.figure(figsize=(5,5))
-    status_counts.plot.pie(autopct="%1.1f%%", colors=bar_colors, startangle=90, ylabel="")
-    st.pyplot(plt)
-    plt.clf()
-    
+    fig_pie = px.pie(df, names='Status',
+                     color='Status',
+                     color_discrete_map={
+                         'Resolved': PALETTE['TEAL_BLUE'],
+                         'Pending': PALETTE['MOONSTONE_BLUE'],
+                         'In Progress': PALETTE['POWDER_BLUE']
+                     })
+    st.plotly_chart(fig_pie, use_container_width=True)
+
     # Time Chart: Reports over time
     st.subheader("Reports Over Time")
-    df['DateTime'] = pd.to_datetime(df['DateTime'])
-    time_data = df.groupby(df['DateTime'].dt.date).size()
-    plt.figure(figsize=(10,5))
-    time_data.plot(kind='line', marker='o', color=PALETTE["TEAL_BLUE"])
-    plt.xlabel("Date")
-    plt.ylabel("Number of Reports")
-    st.pyplot(plt)
-    plt.clf()
+    time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+    fig_line = px.line(time_data, x='DateTime', y='Count',
+                       markers=True,
+                       line_shape='linear',
+                       color_discrete_sequence=[PALETTE['TEAL_BLUE']])
+    st.plotly_chart(fig_line, use_container_width=True)
 
 # -----------------------------
 # Manage Reports
@@ -126,6 +130,7 @@ def manage_reports():
             new_status = st.selectbox("Update Status", options=["Pending","Resolved","In Progress"], key=f"status_{i}")
             if st.button("Update", key=f"btn_{i}"):
                 update_status(i, new_status)
+                df.at[i, "Status"] = new_status  # update locally to refresh dashboard
 
 # -----------------------------
 # Main
