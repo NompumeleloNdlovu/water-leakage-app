@@ -162,23 +162,24 @@ def manage_reports_page():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------------ CUSTOM SIDEBAR ------------------
+# ------------------ CUSTOM SIDEBAR (fixed on the left) ------------------
 def custom_sidebar():
-    st.markdown(
+    st.sidebar.markdown(
         f"<div style='background-color:{COLORS['moonstone_blue']};padding:15px;border-radius:10px;text-align:center;'>"
         f"<h3 style='color:black;'>Drop Watch SA</h3></div>",
         unsafe_allow_html=True
     )
 
-    # Sidebar menu as buttons
-    if st.button("Dashboard"):
+    # Sidebar buttons using st.sidebar
+    if st.sidebar.button("Dashboard"):
         st.session_state.page = "Dashboard"
-    if st.button("Manage Reports"):
+    if st.sidebar.button("Manage Reports"):
         st.session_state.page = "Manage Reports"
-    if st.button("Logout"):
+    if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
         st.experimental_rerun()
+
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
