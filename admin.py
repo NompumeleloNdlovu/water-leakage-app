@@ -4,6 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import plotly.express as px
 import base64
+from datetime import datetime, timedelta
 
 # ------------------ SECRETS & CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -29,7 +30,7 @@ st.set_page_config(
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
-    st.session_state.page = "Municipal Overview"
+    st.session_state.page = "Home"
 
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
@@ -111,9 +112,39 @@ def login_page():
             st.session_state.logged_in = True
             st.session_state.admin_name = admin_info.iloc[0]['AdminName']
             st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
-            st.session_state.page = "Municipal Overview"
+            st.session_state.page = "Home"
         else:
             st.error("Invalid code")
+
+# ------------------ HOME PAGE ------------------
+def home_page():
+    st.markdown(
+        f"<div style='background-color: rgba(115,169,194,0.8); padding:20px; border-radius:10px; margin-bottom:15px;'>"
+        f"<h2 style='text-align:center;color:black;'>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2></div>",
+        unsafe_allow_html=True
+    )
+
+    # Filter for last month
+    if "DateTime" in df.columns:
+        last_month = datetime.today() - timedelta(days=30)
+        df_admin = df[(df['Municipality'] == st.session_state.admin_municipality) & (df['DateTime'] >= last_month)]
+    else:
+        df_admin = df[df['Municipality'] == st.session_state.admin_municipality]
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Reports in Last Month", len(df_admin))
+    col2.metric("Resolved", (df_admin["Status"] == "Resolved").sum() if "Status" in df_admin.columns else 0)
+    col3.metric("Pending", (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0)
+
+    # Quick navigation buttons
+    st.markdown("### Quick Links")
+    btn_col1, btn_col2, btn_col3 = st.columns(3)
+    if btn_col1.button("Municipal Overview"):
+        st.session_state.page = "Municipal Overview"
+    if btn_col2.button("Dashboard"):
+        st.session_state.page = "Dashboard"
+    if btn_col3.button("Manage Reports"):
+        st.session_state.page = "Manage Reports"
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page():
@@ -123,8 +154,8 @@ def municipal_overview_page():
         unsafe_allow_html=True
     )
 
-    min_date = df['DateTime'].min() if "DateTime" in df.columns else pd.Timestamp.today() - pd.Timedelta(days=30)
-    max_date = df['DateTime'].max() if "DateTime" in df.columns else pd.Timestamp.today()
+    min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
+    max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
     start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
 
     df_filtered_range = df
@@ -143,43 +174,6 @@ def municipal_overview_page():
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum())
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum())
 
-    if "Leak Type" in df_filtered.columns and not df_filtered.empty:
-        bar_data = df_filtered['Leak Type'].value_counts().reset_index()
-        bar_data.columns = ['Leak Type', 'Count']
-        fig_bar = px.bar(
-            bar_data, x='Leak Type', y='Count',
-            color='Leak Type',
-            color_discrete_sequence=[
-                COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
-            ],
-            title=f"Leak Reports by Type - {selected_municipality}"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    if "Status" in df_filtered.columns and not df_filtered.empty:
-        pie_data = df_filtered['Status'].value_counts().reset_index()
-        pie_data.columns = ['Status', 'Count']
-        fig_pie = px.pie(
-            pie_data, names='Status', values='Count',
-            color='Status',
-            color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-            title=f"Status Breakdown - {selected_municipality}"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-    if "Municipality" in df_filtered_range.columns and "DateTime" in df_filtered_range.columns:
-        trend_data = df_filtered_range.groupby([df_filtered_range['DateTime'].dt.date, 'Municipality']).size().reset_index(name='Count')
-        fig_trend = px.line(
-            trend_data,
-            x='DateTime',
-            y='Count',
-            color='Municipality',
-            markers=True,
-            title=f"Reports Trend ({start_date} to {end_date})",
-            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']]
-        )
-        st.plotly_chart(fig_trend, use_container_width=True)
-
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
     st.markdown(
@@ -193,45 +187,6 @@ def dashboard_page():
     col1.metric("Total Reports", len(df))
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
-
-    if "Municipality" in df.columns:
-        top_munis = df['Municipality'].value_counts().head(3)
-        st.markdown("### Top 3 Municipalities by Report Count")
-        top_cols = st.columns(3)
-        for idx, (muni, count) in enumerate(top_munis.items()):
-            top_cols[idx].metric(muni, count)
-
-    if "Leak Type" in df.columns:
-        bar_data = df['Leak Type'].value_counts().reset_index()
-        bar_data.columns = ['Leak Type', 'Count']
-        fig_bar = px.bar(
-            bar_data, x='Leak Type', y='Count',
-            color='Leak Type',
-            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
-            title="Leak Reports by Type"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    if "Status" in df.columns:
-        pie_data = df['Status'].value_counts().reset_index()
-        pie_data.columns = ['Status', 'Count']
-        fig_pie = px.pie(
-            pie_data, names='Status', values='Count',
-            color='Status',
-            color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-            title="Status Breakdown"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-    if "DateTime" in df.columns:
-        time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
-        fig_time = px.line(time_data, x='DateTime', y='Count',
-                           title="Reports Over Time",
-                           markers=True,
-                           color_discrete_sequence=[COLORS['teal_blue']])
-        st.plotly_chart(fig_time, use_container_width=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
@@ -280,7 +235,7 @@ def manage_reports_page():
 def custom_sidebar():
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
-        show_on_page=["Login","Municipal Overview","Dashboard","Manage Reports"],
+        show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"],
         sidebar=True
     )
 
@@ -290,6 +245,8 @@ def custom_sidebar():
         unsafe_allow_html=True
     )
 
+    if st.sidebar.button("Home"):
+        st.session_state.page = "Home"
     if st.sidebar.button("Municipal Overview"):
         st.session_state.page = "Municipal Overview"
     if st.sidebar.button("Dashboard"):
@@ -310,7 +267,9 @@ if not st.session_state.logged_in:
     login_page()
 else:
     custom_sidebar()
-    if st.session_state.page == "Municipal Overview":
+    if st.session_state.page == "Home":
+        home_page()
+    elif st.session_state.page == "Municipal Overview":
         municipal_overview_page()
     elif st.session_state.page == "Dashboard":
         dashboard_page()
