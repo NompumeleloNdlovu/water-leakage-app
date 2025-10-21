@@ -36,27 +36,43 @@ if "rerun_after_logout" not in st.session_state:
     st.session_state.rerun_after_logout = False
 
 # ------------------ BACKGROUND IMAGE ------------------
-def set_background_local(image_path, show_on_page=None):
-    """Set background image for specific pages only."""
+def set_background_local(image_path, show_on_page=None, sidebar=False):
+    """Set background image for specific pages only or sidebar."""
     if show_on_page is not None and st.session_state.page not in show_on_page:
         return
     with open(image_path, "rb") as f:
         data = f.read()
     encoded = base64.b64encode(data).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    if sidebar:
+        st.markdown(
+            f"""
+            <style>
+            [data-testid="stSidebar"] > div:first-child {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"""
+            <style>
+            .stApp {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
 # ------------------ GOOGLE SHEET ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
@@ -187,8 +203,15 @@ def manage_reports_page():
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
+    # Sidebar background image
+    set_background_local(
+        "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
+        show_on_page=["Login", "Dashboard", "Manage Reports"],
+        sidebar=True
+    )
+
     st.sidebar.markdown(
-        f"<div style='background-color:{COLORS['moonstone_blue']};padding:15px;border-radius:10px;text-align:center;'>"
+        f"<div style='background-color: rgba(255,255,255,0.8); padding:15px;border-radius:10px;text-align:center;'>"
         f"<h3 style='color:black;'>Drop Watch SA</h3></div>",
         unsafe_allow_html=True
     )
@@ -200,11 +223,13 @@ def custom_sidebar():
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
-        st.session_state.rerun_after_logout = True  # flag for safe rerun
+        st.session_state.rerun_after_logout = True  # safe flag
 
 # ------------------ PAGE RENDER ------------------
+# LOGIN PAGE
 if not st.session_state.logged_in:
     st.session_state.page = "Login"
+    # Background image only for login page
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
         show_on_page=["Login"]
@@ -213,8 +238,11 @@ if not st.session_state.logged_in:
     if st.session_state.rerun_after_login:
         st.session_state.rerun_after_login = False
         st.experimental_rerun()
+
+# DASHBOARD / MANAGE REPORTS
 else:
     custom_sidebar()
+
     # Safe rerun after logout
     if st.session_state.get("rerun_after_logout", False):
         st.session_state.rerun_after_logout = False
