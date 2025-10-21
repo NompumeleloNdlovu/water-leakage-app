@@ -90,7 +90,10 @@ def show_header_footer():
 # --- LOAD DATA ---
 def load_data():
     data = sheet.get_all_records()
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+    return df
 
 # --- UPDATE STATUS ---
 def update_status(index, new_status):
@@ -150,9 +153,9 @@ def manage_reports():
             st.write(f"**Contact:** {row.get('Contact','N/A')}")
             st.write(f"**Municipality:** {row.get('Municipality','N/A')}")
             st.write(f"**Leak Type:** {row.get('Leak Type','N/A')}")
-            st.write(f"**Description:** {row.get('Description', 'N/A')}")
-            st.write(f"**Date/Time:** {row.get('DateTime', 'N/A')}")
-            st.write(f"**Status:** {row.get('Status', 'Pending')}")
+            st.write(f"**Date/Time:** {row.get('DateTime','N/A')}")
+            st.write(f"**Status:** {row.get('Status','Pending')}")
+            st.write(f"**Image URL:** {row.get('Image','')}")
 
             image_url = row.get("Image", "")
             if image_url:
@@ -207,3 +210,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
