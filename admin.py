@@ -5,6 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 from PIL import Image
+import matplotlib.pyplot as plt  # required for pie chart
 
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
@@ -90,15 +91,14 @@ def show_header_footer():
 def load_data():
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # strip whitespace
     return df
 
 # --- UPDATE STATUS ---
 def update_status(index, new_status):
     df = load_data()
     if 0 <= index < len(df):
-        cell = f"H{index + 2}"  # assuming column H = Status
+        cell = f"H{index + 2}"  # column H = Status
         sheet.update(cell, new_status)
         return True
     return False
@@ -147,7 +147,7 @@ def manage_reports():
         return
 
     for i, row in df.iterrows():
-        with st.expander(f" Report #{i+1} — {row.get('Location', 'Unknown')}"):
+        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
             st.write(f"**Name:** {row.get('Name','N/A')}")
             st.write(f"**Contact:** {row.get('Contact','N/A')}")
             st.write(f"**Municipality:** {row.get('Municipality','N/A')}")
@@ -174,14 +174,14 @@ def manage_reports():
 # --- DASHBOARD PAGE ---
 def dashboard():
     show_header_footer()
-    st.title(" Dashboard Overview")
+    st.title("📊 Dashboard Overview")
     df = load_data()
 
     if df.empty:
         st.info("No reports yet.")
         return
 
-    # Convert DateTime column to pandas datetime
+    # Convert DateTime to pandas datetime
     df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
 
     col1, col2, col3 = st.columns(3)
@@ -199,9 +199,15 @@ def dashboard():
     # --- Pie Chart ---
     st.markdown("### 🥧 Leak Type Distribution (Pie Chart)")
     pie_data = df["Leak Type"].value_counts()
-    st.pyplot(lambda: pie_data.plot.pie(
-        autopct="%1.1f%%", figsize=(5, 5), startangle=90, ylabel=""
-    ).figure)
+    fig, ax = plt.subplots(figsize=(5, 5))
+    pie_data.plot.pie(
+        autopct="%1.1f%%",
+        startangle=90,
+        ylabel="",
+        colors=plt.get_cmap("tab20").colors,
+        ax=ax
+    )
+    st.pyplot(fig)
 
     # --- Time Series Chart ---
     st.markdown("### 📈 Reports Over Time (Line Chart)")
@@ -229,6 +235,7 @@ def main():
     elif page == "Logout":
         st.session_state["logged_in"] = False
         st.rerun()
+
 
 if __name__ == "__main__":
     main()
