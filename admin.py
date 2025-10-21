@@ -35,6 +35,16 @@ if "rerun_after_login" not in st.session_state:
 if "rerun_after_logout" not in st.session_state:
     st.session_state.rerun_after_logout = False
 
+# ------------------ SAFE TOP-LEVEL RERUN ------------------
+# This must be at the very top before any widgets render
+if st.session_state.get("rerun_after_login", False):
+    st.session_state.rerun_after_login = False
+    st.experimental_rerun()
+
+if st.session_state.get("rerun_after_logout", False):
+    st.session_state.rerun_after_logout = False
+    st.experimental_rerun()
+
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
     """Set background image for specific pages only or sidebar."""
@@ -226,28 +236,15 @@ def custom_sidebar():
         st.session_state.rerun_after_logout = True  # safe flag
 
 # ------------------ PAGE RENDER ------------------
-# LOGIN PAGE
 if not st.session_state.logged_in:
     st.session_state.page = "Login"
-    # Background image only for login page
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
         show_on_page=["Login"]
     )
     login_page()
-    if st.session_state.rerun_after_login:
-        st.session_state.rerun_after_login = False
-        st.experimental_rerun()
-
-# DASHBOARD / MANAGE REPORTS
 else:
     custom_sidebar()
-
-    # Safe rerun after logout
-    if st.session_state.get("rerun_after_logout", False):
-        st.session_state.rerun_after_logout = False
-        st.experimental_rerun()
-
     if st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
