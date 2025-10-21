@@ -3,165 +3,165 @@ import pandas as pd
 import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
-# -------------------------
-# App config
-# -------------------------
+# ------------------ CONFIG ------------------
 st.set_page_config(page_title="Drop Watch", layout="wide")
 
-# -------------------------
-# Color palette
-# -------------------------
+# ------------------ COLORS ------------------
 COLORS = {
-    "teal_blue": "#008080",
-    "moonstone_blue": "#73A9C2",
-    "powder_blue": "#B0E0E6",
-    "magic_mint": "#AAF0D1",
-    "white_smoke": "#F5F5F5"
+    'teal_blue': '#008080',
+    'moonstone_blue': '#73A9C2',
+    'powder_blue': '#B0E0E6',
+    'magic_mint': '#AAF0D1',
+    'white_smoke': '#F5F5F5'
 }
 
-# -------------------------
-# Background & sidebar style
-# -------------------------
-st.markdown(
-    f"""
-    <style>
-        .reportview-container {{
-            background-color: {COLORS['white_smoke']};
-            color: black;
-        }}
-        .sidebar .sidebar-content {{
-            background-color: {COLORS['teal_blue']};
-            color: white;
-        }}
-    </style>
-    """, unsafe_allow_html=True
-)
-
-# -------------------------
-# Google Sheets setup
-# -------------------------
+# ------------------ GOOGLE SHEETS SETUP ------------------
+SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=SCOPES)
+client = gspread.authorize(creds)
+SHEET_ID = st.secrets["general"]["sheet_id"]
 SHEET_NAME = "Sheet1"
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
+# ------------------ HELPER FUNCTIONS ------------------
+@st.cache_data(ttl=60)
+def load_data():
+    sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    return df, sheet
 
-creds = Credentials.from_service_account_info(st.secrets["google_service_account"], scopes=SCOPES)
-client = gspread.authorize(creds)
-sheet = client.open("WaterLeakReports").worksheet(SHEET_NAME)
-data = sheet.get_all_records()
-df = pd.DataFrame(data)
+def update_status(sheet, row_index, new_status):
+    cell = f"I{row_index+2}"  # Assuming "Status" is column I
+    sheet.update(cell, new_status)
 
-# -------------------------
-# Session state
-# -------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-# -------------------------
-# Login page
-# -------------------------
+# ------------------ LOGIN ------------------
 def login_page():
+    st.markdown(
+        f"""
+        <style>
+        .login-container {{
+            background-color: {COLORS['white_smoke']};
+            padding: 2rem;
+            border-radius: 1rem;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     st.title("Drop Watch Admin Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username == "admin" and password == st.secrets["general"]["admin_code"]:
-            st.session_state.logged_in = True
-            st.experimental_rerun()
-        else:
-            st.error("Invalid credentials")
+    st.markdown("---")
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+        if submitted:
+            if username == "admin" and password == st.secrets["general"]["admin_code"]:
+                st.session_state.logged_in = True
+            else:
+                st.error("Invalid credentials")
 
-# -------------------------
-# Dashboard page
-# -------------------------
-def dashboard():
-    st.title("Drop Watch Dashboard")
-
-    # Metrics
-    if "Status" in df.columns:
-        col1, col2 = st.columns(2)
-        col1.metric("Pending", (df["Status"] == "Pending").sum())
-        col2.metric("Resolved", (df["Status"] == "Resolved").sum())
-
-    # Bar chart - Leak Type
-    if "Leak Type" in df.columns:
-        bar_data = df["Leak Type"].value_counts().reset_index()
-        bar_data.columns = ["Leak Type", "Count"]
-        fig_bar = px.bar(
-            bar_data,
-            x="Leak Type",
+# ------------------ DASHBOARD ------------------
+def dashboard(df):
+    st.markdown("## Dashboard")
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df))
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df["Status"] == "Pending").sum())
+    
+    st.markdown("### Leak Reports by Type")
+    bar_data = df["Leak Type"].value_counts().reset_index()
+    bar_data.columns = ["Leak Type", "Count"]
+    fig_bar = px.bar(
+        bar_data,
+        x="Leak Type",
+        y="Count",
+        color="Leak Type",
+        color_discrete_sequence=[
+            COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint'], COLORS['teal_blue']
+        ],
+        title="Leak Reports by Type"
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+    
+    st.markdown("### Reports Over Time")
+    if "DateTime" in df.columns:
+        df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+        df_time = df.groupby("DateTime").size().reset_index(name="Count")
+        fig_time = px.line(
+            df_time,
+            x="DateTime",
             y="Count",
-            color="Leak Type",
-            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
-            title="Leak Reports by Type"
+            markers=True,
+            title="Reports Over Time",
+            color_discrete_sequence=[COLORS['moonstone_blue']]
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_time, use_container_width=True)
+    else:
+        st.warning("Column 'DateTime' not found in Google Sheet.")
 
-    # Pie chart - Status
-    if "Status" in df.columns:
-        pie_data = df["Status"].value_counts().reset_index()
-        pie_data.columns = ["Status", "Count"]
-        fig_pie = px.pie(
-            pie_data,
-            names="Status",
-            values="Count",
-            color="Status",
-            color_discrete_sequence=[COLORS['teal_blue'], COLORS['magic_mint']],
-            title="Reports by Status"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-# -------------------------
-# Manage Reports page
-# -------------------------
-def manage_reports():
-    st.title("Manage Reports")
-    if df.empty:
-        st.warning("No reports found.")
-        return
-
+# ------------------ MANAGE REPORTS ------------------
+def manage_reports(df, sheet):
+    st.markdown("## Manage Reports")
+    st.markdown("---")
     for i, row in df.iterrows():
-        with st.expander(f"Report #{row.get('ReportID', i+1)} — {row.get('Location','Unknown')}"):
-            st.write(row)
-            if "Status" in row:
-                status = row.get("Status", "Pending")
-                try:
-                    new_status = st.selectbox(
-                        "Update Status",
-                        ["Pending", "Resolved"],
-                        index=["Pending", "Resolved"].index(status)
-                    )
-                    if st.button("Update", key=f"update_{i}"):
-                        cell = sheet.find(str(row["ReportID"]))
-                        sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
-                        st.success(f"Status updated to {new_status}")
-                except ValueError:
-                    st.error("Current status not recognized. Cannot select.")
+        with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
+            st.write(f"Name: {row['Name']}")
+            st.write(f"Contact: {row['Contact']}")
+            st.write(f"Municipality: {row['Municipality']}")
+            st.write(f"Leak Type: {row['Leak Type']}")
+            st.write(f"Location: {row['Location']}")
+            st.write(f"DateTime: {row['DateTime']}")
+            st.write(f"Status: {row['Status']}")
+            st.image(row['Image'], use_column_width=True)
+            
+            new_status = st.selectbox(
+                "Update Status",
+                ["Pending", "Resolved"],
+                index=["Pending", "Resolved"].index(row["Status"])
+            )
+            if st.button(f"Update Report #{row['ReportID']}", key=f"update_{i}"):
+                update_status(sheet, i, new_status)
+                st.success("Status updated successfully")
 
-# -------------------------
-# Main app
-# -------------------------
+# ------------------ MAIN ------------------
 def main():
+    st.markdown(
+        f"""
+        <style>
+        .css-1d391kg {{background-color: {COLORS['white_smoke']};}}
+        [data-testid="stSidebar"] {{background-color: {COLORS['teal_blue']};}}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
     if not st.session_state.logged_in:
         login_page()
         return
 
-    st.sidebar.title("Drop Watch Admin")
-    page = st.sidebar.radio("Navigation", ["Dashboard", "Manage Reports", "Logout"])
+    df, sheet = load_data()
+
+    with st.sidebar:
+        st.title("Drop Watch Admin")
+        page = st.radio("Navigate", ["Dashboard", "Manage Reports", "Logout"])
+        st.markdown("---")
 
     if page == "Dashboard":
-        dashboard()
+        dashboard(df)
     elif page == "Manage Reports":
-        manage_reports()
+        manage_reports(df, sheet)
     elif page == "Logout":
         st.session_state.logged_in = False
-        st.experimental_rerun()
+        st.experimental_rerun()  # Only rerun here to refresh app
 
-# -------------------------
-# Run
-# -------------------------
+# ------------------ RUN ------------------
 if __name__ == "__main__":
     main()
