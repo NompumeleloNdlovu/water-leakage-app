@@ -90,6 +90,8 @@ except Exception as e:
 try:
     admin_sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
     admins_df = pd.DataFrame(admin_sheet.get_all_records())
+    # ------------------ CLEAN COLUMN NAMES ------------------
+    admins_df.columns = admins_df.columns.str.strip()  # remove spaces
 except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
     st.stop()
@@ -103,6 +105,7 @@ def login_page():
     )
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
     if st.button("Login"):
+        # Use cleaned column names
         admin_info = admins_df[admins_df['AdminCode'] == code]
         if not admin_info.empty:
             st.session_state.logged_in = True
@@ -232,7 +235,6 @@ def dashboard_page():
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
-    # Check admin session safely
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
@@ -314,5 +316,3 @@ else:
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
         manage_reports_page()
-
-
