@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 import plotly.express as px
 import base64
 from datetime import datetime, timedelta
+import time
 
 # ------------------ CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -97,27 +98,33 @@ def login_page():
         else:
             st.error("Invalid code")
 
-# ------------------ HOME PAGE ------------------
+# ------------------ HOME PAGE with LIVE COUNTERS ------------------
 def home_page():
     st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:20px; border-radius:10px; margin-bottom:15px;'>"
-                f"<h2 style='text-align:center;color:black;'>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2></div>", unsafe_allow_html=True)
+                f"<h2 style='text-align:center;color:black;'> Welcome, <b>{st.session_state.admin_name}</b> to <b>{st.session_state.admin_municipality}<b>Admin App</b></h2></div>", unsafe_allow_html=True)
 
-    # Metrics: last 30 days
     last_month = datetime.today() - timedelta(days=30)
     df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
     if "DateTime" in df_admin.columns:
         df_admin = df_admin[df_admin['DateTime'] >= last_month]
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Reports in Last 30 Days", len(df_admin))
-    col2.metric("Resolved", (df_admin["Status"] == "Resolved").sum() if "Status" in df_admin.columns else 0)
-    col3.metric("Pending", (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0)
+    total_reports = len(df_admin)
+    resolved = (df_admin["Status"] == "Resolved").sum() if "Status" in df_admin.columns else 0
+    pending = (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0
 
-    st.markdown("### Quick Links")
-    btn1, btn2, btn3 = st.columns(3)
-    if btn1.button("Municipal Overview"): st.session_state.page = "Municipal Overview"
-    if btn2.button("Dashboard"): st.session_state.page = "Dashboard"
-    if btn3.button("Manage Reports"): st.session_state.page = "Manage Reports"
+    col1, col2, col3 = st.columns(3)
+
+    # Live counters
+    total_container = col1.empty()
+    resolved_container = col2.empty()
+    pending_container = col3.empty()
+
+    max_count = max(total_reports, resolved, pending)
+    for i in range(max_count + 1):
+        if i <= total_reports: total_container.metric("Reports in Last 30 Days", i)
+        if i <= resolved: resolved_container.metric("Resolved", i)
+        if i <= pending: pending_container.metric("Pending", i)
+        time.sleep(0.05)
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page():
@@ -184,7 +191,7 @@ def dashboard_page():
     if "Municipality" in df.columns:
         top_muni = df['Municipality'].value_counts().nlargest(3).reset_index()
         top_muni.columns = ['Municipality', 'Reports']
-        st.markdown("### 🏆 Top 3 Municipalities by Number of Reports")
+        st.markdown("###  Top 3 Municipalities by Number of Reports")
         cols = st.columns(3)
         for i, row in top_muni.iterrows():
             cols[i].metric(row['Municipality'], row['Reports'])
