@@ -14,7 +14,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-ADMIN_CODE = "admin123"  # Change this to a secure code
+ADMIN_CODE = "12345"  # Set your admin code here
 
 def get_gsheet_client():
     try:
@@ -125,7 +125,11 @@ def login_page():
             st.experimental_rerun()
         else:
             st.error("❌ Invalid admin code")
-    st.stop()
+        return  # Stop further execution after button click
+
+    # Stop here if not logged in
+    if not st.session_state.get("logged_in", False):
+        st.stop()
 
 # --- MANAGE REPORTS PAGE ---
 def manage_reports():
