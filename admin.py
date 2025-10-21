@@ -29,6 +29,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
     st.session_state.page = "Login"
+if "rerun_after_login" not in st.session_state:
+    st.session_state.rerun_after_login = False
 
 # ------------------ GOOGLE SHEET ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
@@ -60,7 +62,7 @@ def login_page():
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
             st.session_state.page = "Dashboard"
-            st.experimental_rerun()
+            st.session_state.rerun_after_login = True  # set a flag instead of rerunning here
         else:
             st.error("Invalid code")
 
@@ -77,7 +79,6 @@ def dashboard_page():
 
     st.markdown(f"<div style='background-color:{COLORS['white_smoke']};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
 
-    # Metrics
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Total Reports", len(df))
@@ -86,7 +87,6 @@ def dashboard_page():
     with col3:
         st.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # Bar Chart: Leak Type
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -102,7 +102,6 @@ def dashboard_page():
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Pie Chart: Status
     if "Status" in df.columns:
         pie_data = df['Status'].value_counts().reset_index()
         pie_data.columns = ['Status', 'Count']
@@ -116,7 +115,6 @@ def dashboard_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Timeline: Reports over Time
     if "DateTime" in df.columns:
         df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
         time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
@@ -140,7 +138,6 @@ def manage_reports_page():
     for i, row in df.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
             st.write(row)
-            # Status update
             current_status = row["Status"]
             try:
                 new_status = st.selectbox(
@@ -170,7 +167,6 @@ if st.session_state.logged_in:
         st.session_state.page = "Login"
         st.experimental_rerun()
 
-    # Page navigation
     page = st.sidebar.radio(
         "Navigation",
         ("Dashboard", "Manage Reports"),
@@ -181,6 +177,10 @@ if st.session_state.logged_in:
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
     login_page()
+    # Rerun if login was successful
+    if st.session_state.rerun_after_login:
+        st.session_state.rerun_after_login = False
+        st.experimental_rerun()
 else:
     if st.session_state.page == "Dashboard":
         dashboard_page()
