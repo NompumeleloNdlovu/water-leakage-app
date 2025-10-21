@@ -6,6 +6,7 @@ import plotly.express as px
 import base64
 from datetime import datetime, timedelta
 import time
+from PIL import Image
 
 # ------------------ CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -98,10 +99,14 @@ def login_page():
         else:
             st.error("Invalid code")
 
-# ------------------ HOME PAGE with LIVE COUNTERS ------------------
+# ------------------ HOME PAGE with IMAGE and LIVE COUNTERS ------------------
 def home_page():
     st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:20px; border-radius:10px; margin-bottom:15px;'>"
                 f"<h2 style='text-align:center;color:black;'>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2></div>", unsafe_allow_html=True)
+    
+    # Show home page image
+    image = Image.open("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
+    st.image(image, use_column_width=True)
 
     last_month = datetime.today() - timedelta(days=30)
     df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
@@ -191,7 +196,6 @@ def dashboard_page():
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # -------- Plots --------
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -216,7 +220,6 @@ def dashboard_page():
                            markers=True, color_discrete_sequence=[COLORS['teal_blue']])
         st.plotly_chart(fig_time, use_container_width=True)
 
-    # -------- Top Municipalities --------
     if "Municipality" in df.columns:
         top_muni = df['Municipality'].value_counts().nlargest(3).reset_index()
         top_muni.columns = ['Municipality', 'Reports']
@@ -288,3 +291,4 @@ else:
     elif st.session_state.page == "Municipal Overview": municipal_overview_page()
     elif st.session_state.page == "Dashboard": dashboard_page()
     elif st.session_state.page == "Manage Reports": manage_reports_page()
+
