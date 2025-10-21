@@ -32,9 +32,14 @@ if "page" not in st.session_state:
     st.session_state.page = "Login"
 if "rerun_after_login" not in st.session_state:
     st.session_state.rerun_after_login = False
+if "rerun_after_logout" not in st.session_state:
+    st.session_state.rerun_after_logout = False
 
 # ------------------ BACKGROUND IMAGE ------------------
-def set_background_local(image_path):
+def set_background_local(image_path, show_on_page=None):
+    """Set background image for specific pages only."""
+    if show_on_page is not None and st.session_state.page not in show_on_page:
+        return
     with open(image_path, "rb") as f:
         data = f.read()
     encoded = base64.b64encode(data).decode()
@@ -52,9 +57,6 @@ def set_background_local(image_path):
         """,
         unsafe_allow_html=True
     )
-
-# Set your background image
-set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
 
 # ------------------ GOOGLE SHEET ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets",
@@ -198,16 +200,26 @@ def custom_sidebar():
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
-        st.experimental_rerun()
+        st.session_state.rerun_after_logout = True  # flag for safe rerun
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
+    st.session_state.page = "Login"
+    set_background_local(
+        "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
+        show_on_page=["Login"]
+    )
     login_page()
     if st.session_state.rerun_after_login:
         st.session_state.rerun_after_login = False
         st.experimental_rerun()
 else:
     custom_sidebar()
+    # Safe rerun after logout
+    if st.session_state.get("rerun_after_logout", False):
+        st.session_state.rerun_after_logout = False
+        st.experimental_rerun()
+
     if st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
