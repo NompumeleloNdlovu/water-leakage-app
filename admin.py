@@ -4,17 +4,18 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 from PIL import Image
+import io
 
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 
-# --- Google Sheets Setup ---
+# --- GOOGLE SHEETS SETUP ---
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-ADMIN_CODE = "12345"  # Set your admin code here
+ADMIN_CODE = "12345"  # Your admin code
 
 def get_gsheet_client():
     try:
@@ -23,28 +24,23 @@ def get_gsheet_client():
             scopes=SCOPES
         )
         return gspread.authorize(creds)
-    except gspread.exceptions.APIError:
-        st.error("⚠️ Could not access Google Sheet. Check credentials or permissions.")
-        st.stop()
     except Exception as e:
-        st.error(f"⚠️ Unexpected error: {e}")
+        st.error(f"Google Sheets connection failed: {e}")
         st.stop()
 
 client = get_gsheet_client()
 
-def get_sheet():
-    try:
-        return client.open_by_key(SPREADSHEET_ID).sheet1
-    except Exception as e:
-        st.error(f"⚠️ Failed to open sheet: {e}")
-        st.stop()
-
-sheet = get_sheet()
+try:
+    sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+except Exception as e:
+    st.error(f"Could not open spreadsheet: {e}")
+    st.stop()
 
 # --- HEADER + FOOTER ---
 def show_header_footer():
     st.markdown("""
         <style>
+            /* HEADER */
             .header {
                 position: fixed;
                 top: 0;
@@ -63,12 +59,38 @@ def show_header_footer():
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
                 z-index: 999;
             }
-            .header a { display: flex; align-items: center; gap: 12px; color: white !important; text-decoration: none !important; }
-            .header img { height: 45px; width: auto; border-radius: 6px; }
+            .header a {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                color: white !important;
+                text-decoration: none !important;
+            }
+            .header img {
+                height: 45px;
+                width: auto;
+                border-radius: 6px;
+            }
             .header-spacer { height: 90px; }
-            .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #0d6efd; color: white; text-align: center; padding: 10px 0; font-family: 'Cinzel', serif; font-size: 14px; box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15); z-index: 999; }
+
+            /* FOOTER */
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background: #0d6efd;
+                color: white;
+                text-align: center;
+                padding: 10px 0;
+                font-family: 'Cinzel', serif;
+                font-size: 14px;
+                box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+                z-index: 999;
+            }
             .footer-spacer { height: 40px; }
         </style>
+
         <div class="header">
             <a href="#dashboard">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch SA Logo">
@@ -80,14 +102,13 @@ def show_header_footer():
         <div class="footer-spacer"></div>
     """, unsafe_allow_html=True)
 
-# --- LOAD DATA (cached) ---
-@st.cache_data(ttl=60)
+# --- LOAD DATA ---
 def load_data():
     try:
         data = sheet.get_all_records()
         return pd.DataFrame(data)
     except Exception as e:
-        st.error(f"⚠️ Failed to load data: {e}")
+        st.error(f"Failed to load data: {e}")
         return pd.DataFrame()
 
 # --- UPDATE STATUS ---
@@ -97,21 +118,21 @@ def update_status(index, new_status):
         cell = f"H{index + 2}"  # Column H = Status
         try:
             sheet.update(cell, new_status)
-            st.cache_data.clear()  # Clear cache so new status shows
             return True
         except Exception as e:
-            st.error(f"⚠️ Failed to update status: {e}")
+            st.error(f"Failed to update status: {e}")
             return False
     return False
 
 # --- LOGIN PAGE ---
 def login_page():
     show_header_footer()
+
     st.markdown("""
-        <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
-            <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
-                <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
+        <div class="login-container">
+            <div class="login-card">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch Logo">
+                <h2>Drop Watch SA</h2>
                 <p style='color:#555;'>Administrator Access</p>
             </div>
         </div>
@@ -121,13 +142,12 @@ def login_page():
     if st.button("Login", use_container_width=True):
         if code == ADMIN_CODE:
             st.session_state["logged_in"] = True
-            st.success("✅ Login successful! Redirecting...")
-            st.experimental_rerun()
+            st.success("Login successful! Redirecting...")
+            st.experimental_rerun()  # Safely rerun after login
         else:
-            st.error("❌ Invalid admin code")
+            st.error("Invalid admin code")
         return  # Stop further execution after button click
 
-    # Stop here if not logged in
     if not st.session_state.get("logged_in", False):
         st.stop()
 
@@ -142,10 +162,10 @@ def manage_reports():
         return
 
     for i, row in df.iterrows():
-        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
-            st.write(f"**Description:** {row.get('Description', 'N/A')}")
-            st.write(f"**Date:** {row.get('Timestamp', 'N/A')}")
-            st.write(f"**Status:** {row.get('Status', 'Pending')}")
+        with st.expander(f"Report #{i+1} — {row.get('Location', 'Unknown')}"):
+            st.write(f"Description: {row.get('Description', 'N/A')}")
+            st.write(f"Date: {row.get('Timestamp', 'N/A')}")
+            st.write(f"Status: {row.get('Status', 'Pending')}")
 
             image_url = row.get("Image", "")
             if image_url:
@@ -157,14 +177,14 @@ def manage_reports():
             new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}")
             if st.button("Save Update", key=f"save_{i}"):
                 if update_status(i, new_status):
-                    st.success("✅ Status updated successfully!")
+                    st.success("Status updated successfully")
                 else:
-                    st.error("⚠️ Failed to update status.")
+                    st.error("Failed to update status")
 
 # --- DASHBOARD PAGE ---
 def dashboard():
     show_header_footer()
-    st.title("📊 Dashboard Overview")
+    st.title("Dashboard Overview")
     df = load_data()
 
     if df.empty:
@@ -186,7 +206,7 @@ def main():
     if not st.session_state["logged_in"]:
         login_page()
 
-    st.sidebar.title("🔧 Navigation")
+    st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to:", ["Dashboard", "Manage Reports", "Logout"])
 
     if page == "Dashboard":
