@@ -1,245 +1,111 @@
-import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-from datetime import datetime
+# -*- coding: utf-8 -*-
+"""admin.py — Water Leakage Report Admin Dashboard"""
 
-# --- CONFIG ---
-st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
+import streamlit as st
+import gspread
+import pandas as pd
+import json
+from google.oauth2.service_account import Credentials
+
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Admin Dashboard", layout="wide")
 
 # --- GOOGLE SHEETS SETUP ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "service_account.json"
-ADMIN_CODE = "admin123"  # change this for production
+ADMIN_CODE = "admin123"  # Change this to your own secret admin code
 
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+# --- LOAD CREDENTIALS SECURELY FROM STREAMLIT SECRETS ---
+creds_dict = json.loads(st.secrets["google"]["service_account"])
+creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).sheet1
 
-# --- HEADER + FOOTER ---
-def show_header_footer():
-    st.markdown("""
-        <style>
-            /* HEADER */
-            .header {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-                background: linear-gradient(90deg, #0d6efd, #0b5ed7);
-                color: white;
-                padding: 18px 0;
-                font-family: 'Cinzel', serif;
-                font-weight: 600;
-                font-size: 26px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-                z-index: 999;
-            }
-            .header a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: white !important;
-                text-decoration: none !important;
-            }
-            .header img {
-                height: 45px;
-                width: auto;
-                border-radius: 6px;
-            }
-            .header-spacer { height: 90px; }
+# --- APP HEADER ---
+st.title("💧 Water Leakage Report Admin Dashboard")
+st.markdown("Manage and monitor water leakage reports submitted by users in real-time.")
 
-            /* FOOTER */
-            .footer {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                background: #0d6efd;
-                color: white;
-                text-align: center;
-                padding: 10px 0;
-                font-family: 'Cinzel', serif;
-                font-size: 14px;
-                box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
-                z-index: 999;
-            }
-            .footer-spacer { height: 40px; }
-        </style>
+# --- LOGIN SECTION ---
+admin_input = st.text_input("Enter admin access code:", type="password")
 
-        <div class="header">
-            <a href="#dashboard">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch SA Logo">
-                <span>Drop Watch SA Admin Panel</span>
-            </a>
-        </div>
-        <div class="header-spacer"></div>
-    """, unsafe_allow_html=True)
+if admin_input == ADMIN_CODE:
+    st.success("Access granted ✅")
 
-    st.markdown("""
-        <div class="footer">&copy; 2025 Drop Watch SA | Water Security Initiative</div>
-        <div class="footer-spacer"></div>
-    """, unsafe_allow_html=True)
-
-# --- LOAD DATA ---
-def load_data():
+    # --- LOAD DATA FROM GOOGLE SHEET ---
     data = sheet.get_all_records()
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
 
-# --- UPDATE STATUS ---
-def update_status(index, new_status):
-    df = load_data()
-    if 0 <= index < len(df):
-        # Assuming column H = Status (8th column)
-        cell = f"H{index + 2}"  
-        sheet.update(cell, new_status)
-        return True
-    return False
+    if not df.empty:
+        # --- SIDEBAR FILTERS ---
+        st.sidebar.header("🔍 Filter Reports")
+        selected_status = st.sidebar.selectbox("Filter by Status", ["All"] + list(df["Status"].unique()))
+        selected_municipality = st.sidebar.selectbox("Filter by Municipality", ["All"] + list(df["Municipality"].unique()))
 
-# --- LOGIN PAGE (KEEPING YOUR ORIGINAL) ---
-def login_page():
-    show_header_footer()
+        # --- APPLY FILTERS ---
+        filtered_df = df.copy()
+        if selected_status != "All":
+            filtered_df = filtered_df[filtered_df["Status"] == selected_status]
+        if selected_municipality != "All":
+            filtered_df = filtered_df[filtered_df["Municipality"] == selected_municipality]
 
-    st.markdown("""
-        <style>
-            .login-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 75vh;
-                text-align: center;
-            }
-            .login-card {
-                background: white;
-                padding: 40px;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                width: 380px;
-                text-align: center;
-            }
-            .login-card h2 {
-                font-family: 'Cinzel', serif;
-                font-weight: 600;
-                color: #0d6efd;
-                margin-bottom: 10px;
-            }
-            .login-card img {
-                height: 80px;
-                margin-bottom: 15px;
-            }
-            .stTextInput input {
-                border-radius: 8px !important;
-                padding: 10px !important;
-                font-size: 16px !important;
-            }
-            div.stButton > button {
-                width: 100%;
-                border-radius: 8px !important;
-                font-weight: 600;
-                background-color: #0d6efd !important;
-                color: white !important;
-            }
-            div.stButton > button:hover {
-                background-color: #0b5ed7 !important;
-            }
-        </style>
-        <div class="login-container">
-            <div class="login-card">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch Logo">
-                <h2>Drop Watch SA</h2>
-                <p style='color:#555;'>Administrator Access</p>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+        # --- DISPLAY FILTERED DATA ---
+        st.subheader("📋 Filtered Water Leakage Reports")
+        st.dataframe(filtered_df, use_container_width=True)
 
-    code = st.text_input("Enter Admin Code:", type="password", key="login_input")
-    if st.button("Login", use_container_width=True):
-        if code == ADMIN_CODE:
-            st.session_state["logged_in"] = True
-            st.success("✅ Login successful! Redirecting...")
-            st.rerun()
-        else:
-            st.error("❌ Invalid admin code")
-    st.stop()
+        # --- DOWNLOAD SECTION ---
+        st.subheader("📥 Download Reports")
+        csv = filtered_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download as CSV",
+            data=csv,
+            file_name="water_leakage_reports.csv",
+            mime="text/csv"
+        )
 
-# --- MANAGE REPORTS PAGE (MATCHES YOUR SHEET STRUCTURE) ---
-def manage_reports():
-    show_header_footer()
-    st.title("Manage Leak Reports")
-    df = load_data()
+        excel = pd.ExcelWriter("/tmp/water_leakage_reports.xlsx", engine='openpyxl')
+        filtered_df.to_excel(excel, index=False, sheet_name="Reports")
+        excel.close()
 
-    if df.empty:
-        st.info("No reports found.")
-        return
-
-    for i, row in df.iterrows():
-        with st.expander(f"📍 Report #{row.get('ReportID', i+1)} — {row.get('Location', 'Unknown')}"):
-            st.write(f"**Reporter:** {row.get('Name', 'N/A')}")
-            st.write(f"**Contact:** {row.get('Contact', 'N/A')}")
-            st.write(f"**Municipality:** {row.get('Municipality', 'N/A')}")
-            st.write(f"**Leak Type:** {row.get('Leak Type', 'N/A')}")
-            st.write(f"**Date/Time:** {row.get('DateTime', 'N/A')}")
-            st.write(f"**Current Status:** {row.get('Status', 'Pending')}")
-
-            new_status = st.selectbox(
-                "Update Status", 
-                ["Pending", "In Progress", "Resolved"], 
-                index=["Pending", "In Progress", "Resolved"].index(row.get("Status", "Pending")),
-                key=f"status_{i}"
+        with open("/tmp/water_leakage_reports.xlsx", "rb") as f:
+            st.download_button(
+                label="Download as Excel",
+                data=f,
+                file_name="water_leakage_reports.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-            if st.button("Save Update", key=f"save_{i}"):
-                if update_status(i, new_status):
-                    st.success("✅ Status updated successfully!")
-                else:
-                    st.error("⚠️ Failed to update status.")
+        # --- UPDATE STATUS SECTION ---
+        st.subheader("🛠️ Update Report Status")
+        if not df["ReportID"].empty:
+            report_ids = df["ReportID"].tolist()
+            selected_report = st.selectbox("Select Report ID to Update", report_ids)
+            new_status = st.selectbox("Select New Status", ["Pending", "In Progress", "Resolved"])
 
-# --- DASHBOARD PAGE ---
-def dashboard():
-    show_header_footer()
-    st.title("📊 Dashboard Overview")
-    df = load_data()
+            if st.button("Update Status"):
+                try:
+                    cell = sheet.find(str(selected_report))
+                    if cell:
+                        status_col = df.columns.get_loc("Status") + 1
+                        sheet.update_cell(cell.row, status_col, new_status)
+                        st.success(f"✅ Status updated for Report ID {selected_report}")
+                        st.experimental_rerun()
+                    else:
+                        st.error("❌ Report ID not found in Google Sheet.")
+                except Exception as e:
+                    st.error(f"⚠️ An error occurred: {e}")
+        else:
+            st.info("No reports found to update.")
+    else:
+        st.info("No reports found yet.")
+else:
+    if admin_input:
+        st.error("Incorrect access code ❌")
+    st.stop()
 
-    if df.empty:
-        st.info("No reports yet.")
-        return
+# --- FOOTER ---
+st.markdown("---")
+st.markdown(
+    "<div style='text-align:center; color:grey;'>© 2025 Water Leakage Reporting System | Powered by Streamlit</div>",
+    unsafe_allow_html=True
+)
 
-    if "Status" not in df.columns:
-        st.warning("⚠️ The 'Status' column is missing from your Google Sheet.")
-        st.dataframe(df.head())
-        return
-
-    col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total Reports", len(df))
-    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
-
-    st.bar_chart(df["Status"].value_counts())
-
-# --- MAIN ---
-def main():
-    if "logged_in" not in st.session_state:
-        st.session_state["logged_in"] = False
-
-    if not st.session_state["logged_in"]:
-        login_page()
-
-    st.sidebar.title("🔧 Navigation")
-    page = st.sidebar.radio("Go to:", ["Dashboard", "Manage Reports", "Logout"])
-
-    if page == "Dashboard":
-        dashboard()
-    elif page == "Manage Reports":
-        manage_reports()
-    elif page == "Logout":
-        st.session_state["logged_in"] = False
-        st.rerun()
-
-if __name__ == "__main__":
-    main()
