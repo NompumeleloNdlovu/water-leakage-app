@@ -30,10 +30,6 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
     st.session_state.page = "Login"
-if "rerun_after_login" not in st.session_state:
-    st.session_state.rerun_after_login = False
-if "rerun_after_logout" not in st.session_state:
-    st.session_state.rerun_after_logout = False
 
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
@@ -104,7 +100,6 @@ def login_page():
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
             st.session_state.page = "Dashboard"
-            st.session_state.rerun_after_login = True  # set flag, safe
         else:
             st.error("Invalid code")
 
@@ -203,7 +198,6 @@ def manage_reports_page():
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
-    # Sidebar background image
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
         show_on_page=["Login", "Dashboard", "Manage Reports"],
@@ -223,10 +217,8 @@ def custom_sidebar():
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
-        st.session_state.rerun_after_logout = True  # safe flag
 
 # ------------------ PAGE RENDER ------------------
-# LOGIN PAGE
 if not st.session_state.logged_in:
     st.session_state.page = "Login"
     set_background_local(
@@ -234,19 +226,8 @@ if not st.session_state.logged_in:
         show_on_page=["Login"]
     )
     login_page()
-    # ✅ Safe rerun after login button click
-    if st.session_state.rerun_after_login:
-        st.session_state.rerun_after_login = False
-        st.experimental_rerun()
-
-# DASHBOARD / MANAGE REPORTS
 else:
     custom_sidebar()
-    # ✅ Safe rerun after logout button click
-    if st.session_state.rerun_after_logout:
-        st.session_state.rerun_after_logout = False
-        st.experimental_rerun()
-
     if st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
