@@ -1,68 +1,197 @@
-def login_page():
-    show_header_footer()
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+from PIL import Image
 
-    # Your original HTML for the login card stays completely the same
+# --- CONFIG ---
+st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
+
+# --- Google Sheets Setup ---
+SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+ADMIN_CODE = "12345"  # Change this to a secure code
+
+def get_gsheet_client():
+    try:
+        creds = Credentials.from_service_account_info(
+            st.secrets["google_service_account"],
+            scopes=SCOPES
+        )
+        return gspread.authorize(creds)
+    except gspread.exceptions.APIError:
+        st.error("⚠️ Could not access Google Sheet. Check credentials or permissions.")
+        st.stop()
+    except Exception as e:
+        st.error(f"⚠️ Unexpected error: {e}")
+        st.stop()
+
+client = get_gsheet_client()
+
+def get_sheet():
+    try:
+        return client.open_by_key(SPREADSHEET_ID).sheet1
+    except Exception as e:
+        st.error(f"⚠️ Failed to open sheet: {e}")
+        st.stop()
+
+sheet = get_sheet()
+
+# --- HEADER + FOOTER ---
+def show_header_footer():
     st.markdown("""
         <style>
-            .login-container {
+            .header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
                 display: flex;
-                flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                height: 75vh;
-                text-align: center;
-            }
-            .login-card {
-                background: white;
-                padding: 40px;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                width: 380px;
-                text-align: center;
-            }
-            .login-card h2 {
+                gap: 12px;
+                background: linear-gradient(90deg, #0d6efd, #0b5ed7);
+                color: white;
+                padding: 18px 0;
                 font-family: 'Cinzel', serif;
                 font-weight: 600;
-                color: #0d6efd;
-                margin-bottom: 10px;
+                font-size: 26px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                z-index: 999;
             }
-            .login-card img {
-                height: 80px;
-                margin-bottom: 15px;
-            }
-            .stTextInput input {
-                border-radius: 8px !important;
-                padding: 10px !important;
-                font-size: 16px !important;
-            }
-            div.stButton > button {
-                width: 100%;
-                border-radius: 8px !important;
-                font-weight: 600;
-                background-color: #0d6efd !important;
-                color: white !important;
-            }
-            div.stButton > button:hover {
-                background-color: #0b5ed7 !important;
-            }
+            .header a { display: flex; align-items: center; gap: 12px; color: white !important; text-decoration: none !important; }
+            .header img { height: 45px; width: auto; border-radius: 6px; }
+            .header-spacer { height: 90px; }
+            .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #0d6efd; color: white; text-align: center; padding: 10px 0; font-family: 'Cinzel', serif; font-size: 14px; box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15); z-index: 999; }
+            .footer-spacer { height: 40px; }
         </style>
-        <div class="login-container">
-            <div class="login-card">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch Logo">
-                <h2>Drop Watch SA</h2>
+        <div class="header">
+            <a href="#dashboard">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch SA Logo">
+                <span>Drop Watch SA Admin Panel</span>
+            </a>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="footer">&copy; 2025 Drop Watch SA | Water Security Initiative</div>
+        <div class="footer-spacer"></div>
+    """, unsafe_allow_html=True)
+
+# --- LOAD DATA (cached) ---
+@st.cache_data(ttl=60)
+def load_data():
+    try:
+        data = sheet.get_all_records()
+        return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"⚠️ Failed to load data: {e}")
+        return pd.DataFrame()
+
+# --- UPDATE STATUS ---
+def update_status(index, new_status):
+    df = load_data()
+    if 0 <= index < len(df):
+        cell = f"H{index + 2}"  # Column H = Status
+        try:
+            sheet.update(cell, new_status)
+            st.cache_data.clear()  # Clear cache so new status shows
+            return True
+        except Exception as e:
+            st.error(f"⚠️ Failed to update status: {e}")
+            return False
+    return False
+
+# --- LOGIN PAGE ---
+def login_page():
+    show_header_footer()
+    st.markdown("""
+        <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
+            <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
+                <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
                 <p style='color:#555;'>Administrator Access</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
     code = st.text_input("Enter Admin Code:", type="password", key="login_input")
-    
     if st.button("Login", use_container_width=True):
         if code == ADMIN_CODE:
             st.session_state["logged_in"] = True
+            st.success("✅ Login successful! Redirecting...")
+            st.experimental_rerun()
         else:
-            st.error("Invalid admin code")
-    
-    # Stop everything else until logged in
-    if not st.session_state.get("logged_in", False):
-        st.stop()
+            st.error("❌ Invalid admin code")
+    st.stop()
+
+# --- MANAGE REPORTS PAGE ---
+def manage_reports():
+    show_header_footer()
+    st.title("Manage Leak Reports")
+    df = load_data()
+
+    if df.empty:
+        st.info("No reports found.")
+        return
+
+    for i, row in df.iterrows():
+        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
+            st.write(f"**Description:** {row.get('Description', 'N/A')}")
+            st.write(f"**Date:** {row.get('Timestamp', 'N/A')}")
+            st.write(f"**Status:** {row.get('Status', 'Pending')}")
+
+            image_url = row.get("Image", "")
+            if image_url:
+                if image_url.lower().endswith(('.mp4', '.mov', '.avi')):
+                    st.video(image_url)
+                else:
+                    st.image(image_url, caption="Leak Evidence", use_container_width=True)
+
+            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}")
+            if st.button("Save Update", key=f"save_{i}"):
+                if update_status(i, new_status):
+                    st.success("✅ Status updated successfully!")
+                else:
+                    st.error("⚠️ Failed to update status.")
+
+# --- DASHBOARD PAGE ---
+def dashboard():
+    show_header_footer()
+    st.title("📊 Dashboard Overview")
+    df = load_data()
+
+    if df.empty:
+        st.info("No reports yet.")
+        return
+
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric("Total Reports", len(df))
+    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
+
+    st.bar_chart(df["Status"].value_counts())
+
+# --- MAIN ---
+def main():
+    if "logged_in" not in st.session_state:
+        st.session_state["logged_in"] = False
+
+    if not st.session_state["logged_in"]:
+        login_page()
+
+    st.sidebar.title("🔧 Navigation")
+    page = st.sidebar.radio("Go to:", ["Dashboard", "Manage Reports", "Logout"])
+
+    if page == "Dashboard":
+        dashboard()
+    elif page == "Manage Reports":
+        manage_reports()
+    elif page == "Logout":
+        st.session_state["logged_in"] = False
+        st.experimental_rerun()
+
+if __name__ == "__main__":
+    main()
