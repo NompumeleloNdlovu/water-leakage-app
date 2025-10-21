@@ -3,7 +3,6 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import plotly.express as px
-import plotly.graph_objects as go
 
 # -------------------------
 # Google Sheets Authentication
@@ -46,6 +45,13 @@ st.markdown(
         background-color: {PALETTE['teal_blue']};
         color: black;
     }}
+    .stButton>button {{
+        background-color: {PALETTE['moonstone_blue']};
+        color: black;
+    }}
+    .stMetric-value {{
+        color: black;
+    }}
     </style>
     """,
     unsafe_allow_html=True
@@ -58,8 +64,8 @@ st.markdown(
 def load_data():
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    # Normalize column names
-    df.columns = [col.strip() for col in df.columns]
+    df.columns = [col.strip() for col in df.columns]  # normalize column names
+    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')  # safe datetime
     return df
 
 # -------------------------
@@ -68,9 +74,10 @@ def load_data():
 def dashboard():
     df = load_data()
 
-    st.title("Water Leakage Admin Dashboard")
+    st.markdown(f"<h1 style='color:{PALETTE['teal_blue']}'>Water Leakage Admin Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown("---")
 
-    # Metrics
+    # Metrics cards with palette
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df))
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
@@ -101,13 +108,13 @@ def dashboard():
     st.plotly_chart(fig_pie, use_container_width=True)
 
     # Time chart: Reports over time
-    df['DateTime'] = pd.to_datetime(df['DateTime'])
     time_counts = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
     fig_time = px.line(
         time_counts,
         x='DateTime', y='Count',
         title="Reports Over Time",
-        markers=True
+        markers=True,
+        color_discrete_sequence=[PALETTE["teal_blue"]]
     )
     st.plotly_chart(fig_time, use_container_width=True)
 
@@ -115,7 +122,10 @@ def dashboard():
 # Main
 # -------------------------
 def main():
-    dashboard()
+    # Sidebar navigation
+    page = st.sidebar.radio("Navigation", ["Dashboard"])
+    if page == "Dashboard":
+        dashboard()
 
 if __name__ == "__main__":
     main()
