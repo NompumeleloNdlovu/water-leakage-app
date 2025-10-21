@@ -51,13 +51,13 @@ except Exception as e:
 def login_page():
     st.markdown(
         f"""
-        <div style="background-color:{COLORS['moonstone_blue']};padding:20px;border-radius:10px;">
-            <h1 style="text-align:center;color:black;">Drop Watch SA - Admin Login</h1>
+        <div style="background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;">
+            <h1 style="text-align:center;color:white;">Drop Watch SA - Admin Login</h1>
         </div>
         """,
         unsafe_allow_html=True
     )
-    code = st.text_input("Enter Admin Code", type="password")
+    code = st.text_input("", placeholder="Enter Admin Code", type="password")
     if st.button("Login"):
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
@@ -138,11 +138,11 @@ def manage_reports_page():
     for i, row in df.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
             st.write(row)
-            # ---------------- FIXED STATUS DROPDOWN ----------------
-            current_status = row.get("Status", "Pending")  # ensure status exists
+
+            current_status = row.get("Status", "Pending")
             options = ["Pending", "Resolved"]
             if current_status not in options:
-                current_status = "Pending"  # fallback for unknown status
+                current_status = "Pending"
 
             new_status = st.selectbox(
                 "Update Status",
@@ -156,36 +156,38 @@ def manage_reports_page():
                     cell = sheet.find(str(row['ReportID']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
+                    df.at[i, "Status"] = new_status
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
-            # -------------------------------------------------------
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------------ SIDEBAR NAVIGATION ------------------
-if st.session_state.logged_in:
-    st.sidebar.markdown(f"<h3 style='color:black;'>Drop Watch SA</h3>", unsafe_allow_html=True)
+# ------------------ CUSTOM SIDEBAR ------------------
+def custom_sidebar():
+    st.markdown(
+        f"<div style='background-color:{COLORS['moonstone_blue']};padding:15px;border-radius:10px;text-align:center;'>"
+        f"<h3 style='color:black;'>Drop Watch SA</h3></div>",
+        unsafe_allow_html=True
+    )
 
-    if st.sidebar.button("Logout"):
+    # Sidebar menu as buttons
+    if st.button("Dashboard"):
+        st.session_state.page = "Dashboard"
+    if st.button("Manage Reports"):
+        st.session_state.page = "Manage Reports"
+    if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
         st.experimental_rerun()
 
-    page = st.sidebar.radio(
-        "Navigation",
-        ("Dashboard", "Manage Reports"),
-        index=0 if st.session_state.page == "Dashboard" else 1
-    )
-    st.session_state.page = page
-
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
     login_page()
-    # Safe rerun: only trigger after login_page has executed fully
-    if st.session_state.get("rerun_after_login", False):
-        st.session_state["rerun_after_login"] = False
+    if st.session_state.rerun_after_login:
+        st.session_state.rerun_after_login = False
         st.experimental_rerun()
 else:
+    custom_sidebar()
     if st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
