@@ -101,7 +101,7 @@ def login_page():
 # ------------------ HOME PAGE with LIVE COUNTERS ------------------
 def home_page():
     st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:20px; border-radius:10px; margin-bottom:15px;'>"
-                f"<h2 style='text-align:center;color:black;'> Welcome, <b>{st.session_state.admin_name}</b> to <b>{st.session_state.admin_municipality}<b>Admin App</b></h2></div>", unsafe_allow_html=True)
+                f"<h2 style='text-align:center;color:black;'>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2></div>", unsafe_allow_html=True)
 
     last_month = datetime.today() - timedelta(days=30)
     df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
@@ -113,8 +113,6 @@ def home_page():
     pending = (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0
 
     col1, col2, col3 = st.columns(3)
-
-    # Live counters
     total_container = col1.empty()
     resolved_container = col2.empty()
     pending_container = col3.empty()
@@ -130,7 +128,7 @@ def home_page():
 def municipal_overview_page():
     st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
                 f"<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>", unsafe_allow_html=True)
-    
+
     min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
     max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
     start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
@@ -150,6 +148,37 @@ def municipal_overview_page():
     col1.metric("Total Reports", len(df_filtered))
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
+
+    # -------- Municipal Overview Charts --------
+    if not df_filtered.empty:
+        st.markdown("### Leak Type Distribution")
+        if "Leak Type" in df_filtered.columns:
+            bar_data = df_filtered['Leak Type'].value_counts().reset_index()
+            bar_data.columns = ['Leak Type', 'Count']
+            fig_bar = px.bar(bar_data, x='Leak Type', y='Count',
+                             color='Leak Type',
+                             color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+                             title=f"Leak Reports by Type - {selected_municipality}")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.markdown("### Status Distribution")
+        if "Status" in df_filtered.columns:
+            pie_data = df_filtered['Status'].value_counts().reset_index()
+            pie_data.columns = ['Status', 'Count']
+            fig_pie = px.pie(pie_data, names='Status', values='Count',
+                             color='Status',
+                             color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+                             title=f"Status Breakdown - {selected_municipality}")
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        st.markdown("### Reports Over Time")
+        if "DateTime" in df_filtered.columns:
+            time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
+            fig_line = px.line(time_data, x='DateTime', y='Count',
+                               title=f"Reports Over Time - {selected_municipality}",
+                               markers=True,
+                               color_discrete_sequence=[COLORS['teal_blue']])
+            st.plotly_chart(fig_line, use_container_width=True)
 
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
@@ -191,7 +220,7 @@ def dashboard_page():
     if "Municipality" in df.columns:
         top_muni = df['Municipality'].value_counts().nlargest(3).reset_index()
         top_muni.columns = ['Municipality', 'Reports']
-        st.markdown("###  Top 3 Municipalities by Number of Reports")
+        st.markdown("### 🏆 Top 3 Municipalities by Number of Reports")
         cols = st.columns(3)
         for i, row in top_muni.iterrows():
             cols[i].metric(row['Municipality'], row['Reports'])
