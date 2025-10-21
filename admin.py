@@ -35,16 +35,6 @@ if "rerun_after_login" not in st.session_state:
 if "rerun_after_logout" not in st.session_state:
     st.session_state.rerun_after_logout = False
 
-# ------------------ SAFE TOP-LEVEL RERUN ------------------
-# This must be at the very top before any widgets render
-if st.session_state.get("rerun_after_login", False):
-    st.session_state.rerun_after_login = False
-    st.experimental_rerun()
-
-if st.session_state.get("rerun_after_logout", False):
-    st.session_state.rerun_after_logout = False
-    st.experimental_rerun()
-
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
     """Set background image for specific pages only or sidebar."""
@@ -114,7 +104,7 @@ def login_page():
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
             st.session_state.page = "Dashboard"
-            st.session_state.rerun_after_login = True
+            st.session_state.rerun_after_login = True  # set flag, safe
         else:
             st.error("Invalid code")
 
@@ -236,6 +226,7 @@ def custom_sidebar():
         st.session_state.rerun_after_logout = True  # safe flag
 
 # ------------------ PAGE RENDER ------------------
+# LOGIN PAGE
 if not st.session_state.logged_in:
     st.session_state.page = "Login"
     set_background_local(
@@ -243,9 +234,21 @@ if not st.session_state.logged_in:
         show_on_page=["Login"]
     )
     login_page()
+    # ✅ Safe rerun after login button click
+    if st.session_state.rerun_after_login:
+        st.session_state.rerun_after_login = False
+        st.experimental_rerun()
+
+# DASHBOARD / MANAGE REPORTS
 else:
     custom_sidebar()
+    # ✅ Safe rerun after logout button click
+    if st.session_state.rerun_after_logout:
+        st.session_state.rerun_after_logout = False
+        st.experimental_rerun()
+
     if st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
         manage_reports_page()
+
