@@ -60,7 +60,7 @@ def login_page():
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
             st.session_state.page = "Dashboard"
-            st.success("Login successful!")
+            st.experimental_rerun()
         else:
             st.error("Invalid code")
 
@@ -163,17 +163,19 @@ def manage_reports_page():
 
 # ------------------ SIDEBAR NAVIGATION ------------------
 if st.session_state.logged_in:
-    st.sidebar.markdown(
-        f"<h3 style='color:black;'>Drop Watch SA</h3>", unsafe_allow_html=True
-    )
-    page = st.sidebar.radio(
-        "Navigation",
-        ("Dashboard", "Manage Reports")
-    )
+    st.sidebar.markdown(f"<h3 style='color:black;'>Drop Watch SA</h3>", unsafe_allow_html=True)
+
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.page = "Login"
         st.experimental_rerun()
+
+    # Page navigation
+    page = st.sidebar.radio(
+        "Navigation",
+        ("Dashboard", "Manage Reports"),
+        index=0 if st.session_state.page == "Dashboard" else 1
+    )
     st.session_state.page = page
 
 # ------------------ PAGE RENDER ------------------
