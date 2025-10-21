@@ -12,10 +12,12 @@ st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 # --- GOOGLE SHEETS SETUP ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "service_account.json"
 ADMIN_CODE = "admin123"  # change this
 
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+creds = Credentials.from_service_account_info(
+    st.secrets["google_service_account"],
+    scopes=SCOPES
+)
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).sheet1
 
