@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Admin Dashboard for Water Leakage Reports"""
+"""Drop Watch SA Admin Panel"""
 
 import streamlit as st
 import gspread
@@ -15,19 +15,16 @@ SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 ADMIN_CODE = "admin123"  # Change this to a secure code
 
-# --- LOAD GOOGLE SHEETS CREDENTIALS SECURELY ---
+# --- LOAD GOOGLE SHEETS CREDENTIALS ---
 try:
     # Load service account JSON from Streamlit secrets
     creds_json = st.secrets["google"]["service_account"]
-    
-    # Replace literal '\n' in private_key with real newline
     creds_dict = json.loads(creds_json)
+    # Fix escaped newlines in private key
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     sheet = client.open(SHEET_NAME).sheet1
-
 except KeyError:
     st.error("⚠️ Google service account secret not found. Check Streamlit secrets.")
     st.stop()
@@ -88,13 +85,13 @@ def update_status(report_id, new_status):
 def login_page():
     show_header_footer()
     st.markdown("""
-        <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
-            <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
-                <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
-                <p style='color:#555;'>Administrator Access</p>
-            </div>
+    <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
+        <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
+            <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
+            <p style='color:#555;'>Administrator Access</p>
         </div>
+    </div>
     """, unsafe_allow_html=True)
 
     code = st.text_input("Enter Admin Code:", type="password", key="login_input")
@@ -106,6 +103,22 @@ def login_page():
         else:
             st.error("❌ Invalid admin code")
     st.stop()
+
+# --- DASHBOARD ---
+def dashboard():
+    show_header_footer()
+    st.title("📊 Dashboard Overview")
+    df = load_data()
+    if df.empty:
+        st.info("No reports yet.")
+        return
+
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric("Total Reports", len(df))
+    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
+
+    st.bar_chart(df["Status"].value_counts())
 
 # --- MANAGE REPORTS ---
 def manage_reports():
@@ -148,22 +161,6 @@ def manage_reports():
     st.subheader("Download Reports")
     csv = filtered_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv, "water_leakage_reports.csv", "text/csv")
-
-# --- DASHBOARD ---
-def dashboard():
-    show_header_footer()
-    st.title("📊 Dashboard Overview")
-    df = load_data()
-    if df.empty:
-        st.info("No reports yet.")
-        return
-
-    col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total Reports", len(df))
-    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
-
-    st.bar_chart(df["Status"].value_counts())
 
 # --- MAIN ---
 def main():
