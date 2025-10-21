@@ -13,14 +13,21 @@ st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 # --- SETTINGS ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-ADMIN_CODE = "admin123"  # change this to your secure code
+ADMIN_CODE = "admin123"  # Change this to a secure code
 
 # --- LOAD GOOGLE SHEETS CREDENTIALS SECURELY ---
 try:
-    creds_dict = json.loads(st.secrets["google"]["service_account"])
+    # Load service account JSON from Streamlit secrets
+    creds_json = st.secrets["google"]["service_account"]
+    
+    # Replace literal '\n' in private_key with real newline
+    creds_dict = json.loads(creds_json)
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     sheet = client.open(SHEET_NAME).sheet1
+
 except KeyError:
     st.error("⚠️ Google service account secret not found. Check Streamlit secrets.")
     st.stop()
@@ -180,5 +187,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
