@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-"""admin.py"""
-
 import streamlit as st
 import pandas as pd
 import gspread
@@ -10,44 +7,21 @@ from datetime import datetime
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 
-# --- Google Sheets Setup ---
-SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-ADMIN_CODE = "12345"  # 🔒 Change this to a secure code
+# --- GOOGLE SHEETS SETUP ---
+SHEET_NAME = "WaterLeakReports"
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SERVICE_ACCOUNT_FILE = "service_account.json"
+ADMIN_CODE = "admin123"  # change this for production
 
-# --- CONNECT TO GOOGLE SHEET ---
-def get_gsheet_client():
-    try:
-        creds = Credentials.from_service_account_info(
-            st.secrets["google_service_account"],
-            scopes=SCOPES
-        )
-        return gspread.authorize(creds)
-    except gspread.exceptions.APIError:
-        st.error("⚠️ Could not access Google Sheet. Check credentials or permissions.")
-        st.stop()
-    except Exception as e:
-        st.error(f"⚠️ Unexpected error: {e}")
-        st.stop()
-
-client = get_gsheet_client()
-
-def get_sheet():
-    try:
-        return client.open_by_key(SPREADSHEET_ID).sheet1
-    except Exception as e:
-        st.error(f"⚠️ Failed to open sheet: {e}")
-        st.stop()
-
-sheet = get_sheet()
+creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+client = gspread.authorize(creds)
+sheet = client.open(SHEET_NAME).sheet1
 
 # --- HEADER + FOOTER ---
 def show_header_footer():
     st.markdown("""
         <style>
+            /* HEADER */
             .header {
                 position: fixed;
                 top: 0;
@@ -66,12 +40,38 @@ def show_header_footer():
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
                 z-index: 999;
             }
-            .header a { display: flex; align-items: center; gap: 12px; color: white !important; text-decoration: none !important; }
-            .header img { height: 45px; width: auto; border-radius: 6px; }
+            .header a {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                color: white !important;
+                text-decoration: none !important;
+            }
+            .header img {
+                height: 45px;
+                width: auto;
+                border-radius: 6px;
+            }
             .header-spacer { height: 90px; }
-            .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #0d6efd; color: white; text-align: center; padding: 10px 0; font-family: 'Cinzel', serif; font-size: 14px; box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15); z-index: 999; }
+
+            /* FOOTER */
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background: #0d6efd;
+                color: white;
+                text-align: center;
+                padding: 10px 0;
+                font-family: 'Cinzel', serif;
+                font-size: 14px;
+                box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+                z-index: 999;
+            }
             .footer-spacer { height: 40px; }
         </style>
+
         <div class="header">
             <a href="#dashboard">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch SA Logo">
@@ -79,43 +79,80 @@ def show_header_footer():
             </a>
         </div>
         <div class="header-spacer"></div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
         <div class="footer">&copy; 2025 Drop Watch SA | Water Security Initiative</div>
         <div class="footer-spacer"></div>
     """, unsafe_allow_html=True)
 
-# --- LOAD DATA (cached) ---
-@st.cache_data(ttl=60)
+# --- LOAD DATA ---
 def load_data():
-    try:
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        return df
-    except Exception as e:
-        st.error(f"⚠️ Failed to load data: {e}")
-        return pd.DataFrame()
+    data = sheet.get_all_records()
+    return pd.DataFrame(data)
 
 # --- UPDATE STATUS ---
 def update_status(index, new_status):
     df = load_data()
     if 0 <= index < len(df):
-        cell = f"H{index + 2}"  # Column H = Status (based on your sheet)
-        try:
-            sheet.update(cell, new_status)
-            st.cache_data.clear()
-            return True
-        except Exception as e:
-            st.error(f"⚠️ Failed to update status: {e}")
-            return False
+        # Assuming column H = Status (8th column)
+        cell = f"H{index + 2}"  
+        sheet.update(cell, new_status)
+        return True
     return False
 
-# --- LOGIN PAGE ---
+# --- LOGIN PAGE (KEEPING YOUR ORIGINAL) ---
 def login_page():
     show_header_footer()
+
     st.markdown("""
-        <div style="display:flex; justify-content:center; align-items:center; height:75vh; text-align:center;">
-            <div style="background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:380px;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" height="80px" style="margin-bottom:15px;">
-                <h2 style="font-family:'Cinzel', serif; color:#0d6efd;">Drop Watch SA</h2>
+        <style>
+            .login-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 75vh;
+                text-align: center;
+            }
+            .login-card {
+                background: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                width: 380px;
+                text-align: center;
+            }
+            .login-card h2 {
+                font-family: 'Cinzel', serif;
+                font-weight: 600;
+                color: #0d6efd;
+                margin-bottom: 10px;
+            }
+            .login-card img {
+                height: 80px;
+                margin-bottom: 15px;
+            }
+            .stTextInput input {
+                border-radius: 8px !important;
+                padding: 10px !important;
+                font-size: 16px !important;
+            }
+            div.stButton > button {
+                width: 100%;
+                border-radius: 8px !important;
+                font-weight: 600;
+                background-color: #0d6efd !important;
+                color: white !important;
+            }
+            div.stButton > button:hover {
+                background-color: #0b5ed7 !important;
+            }
+        </style>
+        <div class="login-container">
+            <div class="login-card">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Drop Watch Logo">
+                <h2>Drop Watch SA</h2>
                 <p style='color:#555;'>Administrator Access</p>
             </div>
         </div>
@@ -126,54 +163,33 @@ def login_page():
         if code == ADMIN_CODE:
             st.session_state["logged_in"] = True
             st.success("✅ Login successful! Redirecting...")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Invalid admin code")
     st.stop()
 
-# --- MANAGE REPORTS PAGE ---
+# --- MANAGE REPORTS PAGE (MATCHES YOUR SHEET STRUCTURE) ---
 def manage_reports():
     show_header_footer()
-    st.title("🧾 Manage Leak Reports")
+    st.title("Manage Leak Reports")
     df = load_data()
 
     if df.empty:
         st.info("No reports found.")
         return
 
-    # 🔍 Search and filter controls
-    st.markdown("### 🔎 Search & Filter")
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        search_query = st.text_input("Search by Name, Municipality, or Location").strip().lower()
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All", "Pending", "In Progress", "Resolved"], index=0)
-
-    # 🔎 Apply filters
-    if search_query:
-        df = df[
-            df["Name"].str.lower().str.contains(search_query, na=False) |
-            df["Municipality"].str.lower().str.contains(search_query, na=False) |
-            df["Location"].str.lower().str.contains(search_query, na=False)
-        ]
-    if status_filter != "All":
-        df = df[df["Status"] == status_filter]
-
-    st.write(f"Showing {len(df)} result(s).")
-
-    # 🧾 Display reports
     for i, row in df.iterrows():
         with st.expander(f"📍 Report #{row.get('ReportID', i+1)} — {row.get('Location', 'Unknown')}"):
-            st.write(f"**Name:** {row.get('Name', 'N/A')}")
+            st.write(f"**Reporter:** {row.get('Name', 'N/A')}")
             st.write(f"**Contact:** {row.get('Contact', 'N/A')}")
             st.write(f"**Municipality:** {row.get('Municipality', 'N/A')}")
             st.write(f"**Leak Type:** {row.get('Leak Type', 'N/A')}")
-            st.write(f"**Date Reported:** {row.get('DateTime', 'N/A')}")
-            st.write(f"**Status:** {row.get('Status', 'Pending')}")
+            st.write(f"**Date/Time:** {row.get('DateTime', 'N/A')}")
+            st.write(f"**Current Status:** {row.get('Status', 'Pending')}")
 
             new_status = st.selectbox(
                 "Update Status", 
-                ["Pending", "In Progress", "Resolved"],
+                ["Pending", "In Progress", "Resolved"], 
                 index=["Pending", "In Progress", "Resolved"].index(row.get("Status", "Pending")),
                 key=f"status_{i}"
             )
@@ -195,17 +211,14 @@ def dashboard():
         return
 
     if "Status" not in df.columns:
-        st.warning("⚠️ The 'Status' column is missing from the Google Sheet.")
+        st.warning("⚠️ The 'Status' column is missing from your Google Sheet.")
         st.dataframe(df.head())
         return
 
     col1, col2, col3 = st.columns(3)
-    with col1: 
-        st.metric("Total Reports", len(df))
-    with col2: 
-        st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: 
-        st.metric("Pending", (df["Status"] == "Pending").sum())
+    with col1: st.metric("Total Reports", len(df))
+    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
 
     st.bar_chart(df["Status"].value_counts())
 
@@ -226,7 +239,7 @@ def main():
         manage_reports()
     elif page == "Logout":
         st.session_state["logged_in"] = False
-        st.experimental_rerun()
+        st.rerun()
 
 if __name__ == "__main__":
     main()
