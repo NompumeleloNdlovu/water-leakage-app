@@ -9,7 +9,7 @@ import base64
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
 SHEET_KEY = st.secrets["general"]["sheet_id"]
 
-# Squilla Fund color palette
+# Color palette
 COLORS = {
     "teal_blue": "#008080",
     "moonstone_blue": "#73A9C2",
@@ -29,11 +29,10 @@ st.set_page_config(
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
-    st.session_state.page = "Login"
+    st.session_state.page = "Municipal Overview"
 
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
-    """Set background image for specific pages only or sidebar."""
     if show_on_page is not None and st.session_state.page not in show_on_page:
         return
     with open(image_path, "rb") as f:
@@ -81,6 +80,8 @@ try:
     records = sheet.get_all_records()
     df = pd.DataFrame(records)
     df.columns = df.columns.str.strip()
+    if "DateTime" in df.columns:
+        df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
 except Exception as e:
     st.error(f"Failed to load Google Sheet: {e}")
     st.stop()
@@ -99,35 +100,80 @@ def login_page():
     if st.button("Login"):
         if code == st.secrets["general"]["admin_code"]:
             st.session_state.logged_in = True
-            st.session_state.page = "Dashboard"
+            st.session_state.page = "Municipal Overview"
         else:
             st.error("Invalid code")
+
+# ------------------ MUNICIPAL OVERVIEW ------------------
+def municipal_overview_page():
+    st.markdown(
+        f"<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+        f"<h1 style='text-align:center;color:black;'>Municipal Overview - Last 30 Days</h1></div>",
+        unsafe_allow_html=True
+    )
+
+    # Filter last 30 days
+    last_30_days = pd.Timestamp.today() - pd.Timedelta(days=30)
+    df_recent = df[df['DateTime'] >= last_30_days] if "DateTime" in df.columns else df
+
+    # Municipality filter
+    if "Municipality" in df_recent.columns:
+        municipalities = df_recent['Municipality'].dropna().unique()
+        selected_municipality = st.selectbox("Select Municipality", municipalities)
+        df_filtered = df_recent[df_recent['Municipality'] == selected_municipality]
+    else:
+        df_filtered = df_recent
+
+    # Metrics
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df_filtered))
+    col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df_filtered["Status"] == "Pending").sum())
+
+    # Mini charts
+    if "Leak Type" in df_filtered.columns and not df_filtered.empty:
+        bar_data = df_filtered['Leak Type'].value_counts().reset_index()
+        bar_data.columns = ['Leak Type', 'Count']
+        fig_bar = px.bar(
+            bar_data, x='Leak Type', y='Count',
+            color='Leak Type',
+            color_discrete_sequence=[
+                COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
+            ],
+            title=f"Leak Reports by Type - {selected_municipality}"
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    if "Status" in df_filtered.columns and not df_filtered.empty:
+        pie_data = df_filtered['Status'].value_counts().reset_index()
+        pie_data.columns = ['Status', 'Count']
+        fig_pie = px.pie(
+            pie_data, names='Status', values='Count',
+            color='Status',
+            color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+            title=f"Status Breakdown - {selected_municipality}"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
 
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
     st.markdown(
         f"<div style='background-color: rgba(115,169,194,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
-        f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard</h1></div>",
+        f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard (All Municipalities)</h1></div>",
         unsafe_allow_html=True
     )
 
     st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Reports", len(df))
-    with col2:
-        st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3:
-        st.metric("Pending", (df["Status"] == "Pending").sum())
+    col1.metric("Total Reports", len(df))
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df["Status"] == "Pending").sum())
 
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
         fig_bar = px.bar(
-            bar_data,
-            x='Leak Type',
-            y='Count',
+            bar_data, x='Leak Type', y='Count',
             color='Leak Type',
             color_discrete_sequence=[
                 COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
@@ -140,26 +186,19 @@ def dashboard_page():
         pie_data = df['Status'].value_counts().reset_index()
         pie_data.columns = ['Status', 'Count']
         fig_pie = px.pie(
-            pie_data,
-            names='Status',
-            values='Count',
+            pie_data, names='Status', values='Count',
             color='Status',
             color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-            title="Reports by Status"
+            title="Status Breakdown"
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
     if "DateTime" in df.columns:
-        df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
         time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
-        fig_time = px.line(
-            time_data,
-            x='DateTime',
-            y='Count',
-            title="Reports Over Time",
-            markers=True,
-            color_discrete_sequence=[COLORS['teal_blue']]
-        )
+        fig_time = px.line(time_data, x='DateTime', y='Count',
+                           title="Reports Over Time",
+                           markers=True,
+                           color_discrete_sequence=[COLORS['teal_blue']])
         st.plotly_chart(fig_time, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -170,11 +209,10 @@ def manage_reports_page():
     st.markdown("## Manage Reports")
 
     for i, row in df.iterrows():
-        with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
+        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
             st.write(row)
-
             current_status = row.get("Status", "Pending")
-            options = ["Pending", "Resolved", "Rejected"]
+            options = ["Pending", "Resolved"]
             if current_status not in options:
                 current_status = "Pending"
 
@@ -200,7 +238,7 @@ def manage_reports_page():
 def custom_sidebar():
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
-        show_on_page=["Login", "Dashboard", "Manage Reports"],
+        show_on_page=["Login","Municipal Overview","Dashboard","Manage Reports"],
         sidebar=True
     )
 
@@ -210,6 +248,8 @@ def custom_sidebar():
         unsafe_allow_html=True
     )
 
+    if st.sidebar.button("Municipal Overview"):
+        st.session_state.page = "Municipal Overview"
     if st.sidebar.button("Dashboard"):
         st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"):
@@ -228,7 +268,9 @@ if not st.session_state.logged_in:
     login_page()
 else:
     custom_sidebar()
-    if st.session_state.page == "Dashboard":
+    if st.session_state.page == "Municipal Overview":
+        municipal_overview_page()
+    elif st.session_state.page == "Dashboard":
         dashboard_page()
     elif st.session_state.page == "Manage Reports":
         manage_reports_page()
