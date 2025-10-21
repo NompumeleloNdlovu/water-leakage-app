@@ -5,7 +5,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 from PIL import Image
-import io
 
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
@@ -148,7 +147,7 @@ def manage_reports():
         return
 
     for i, row in df.iterrows():
-        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
+        with st.expander(f" Report #{i+1} — {row.get('Location', 'Unknown')}"):
             st.write(f"**Name:** {row.get('Name','N/A')}")
             st.write(f"**Contact:** {row.get('Contact','N/A')}")
             st.write(f"**Municipality:** {row.get('Municipality','N/A')}")
@@ -175,19 +174,42 @@ def manage_reports():
 # --- DASHBOARD PAGE ---
 def dashboard():
     show_header_footer()
-    st.title("📊 Dashboard Overview")
+    st.title(" Dashboard Overview")
     df = load_data()
 
     if df.empty:
         st.info("No reports yet.")
         return
 
-    col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total Reports", len(df))
-    with col2: st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3: st.metric("Pending", (df["Status"] == "Pending").sum())
+    # Convert DateTime column to pandas datetime
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
 
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Reports", len(df))
+    with col2:
+        st.metric("Resolved", (df["Status"] == "Resolved").sum())
+    with col3:
+        st.metric("Pending", (df["Status"] == "Pending").sum())
+
+    # --- Bar Chart ---
+    st.markdown("### 📊 Status Breakdown (Bar Chart)")
     st.bar_chart(df["Status"].value_counts())
+
+    # --- Pie Chart ---
+    st.markdown("### 🥧 Leak Type Distribution (Pie Chart)")
+    pie_data = df["Leak Type"].value_counts()
+    st.pyplot(lambda: pie_data.plot.pie(
+        autopct="%1.1f%%", figsize=(5, 5), startangle=90, ylabel=""
+    ).figure)
+
+    # --- Time Series Chart ---
+    st.markdown("### 📈 Reports Over Time (Line Chart)")
+    if not df["DateTime"].isnull().all():
+        time_data = df.groupby(df["DateTime"].dt.date).size()
+        st.line_chart(time_data)
+    else:
+        st.info("No valid dates for time chart.")
 
 # --- MAIN ---
 def main():
@@ -210,4 +232,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
