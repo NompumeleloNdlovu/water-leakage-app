@@ -13,7 +13,7 @@ st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
 # --- GOOGLE SHEETS SETUP ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "service_account.json"
+SERVICE_ACCOUNT_FILE = "waterleakagereport-a7293c7d9ebe.json"
 ADMIN_CODE = "admin123"  # change this
 
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
