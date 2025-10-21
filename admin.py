@@ -120,7 +120,6 @@ def municipal_overview_page():
         unsafe_allow_html=True
     )
 
-    # Date range picker
     min_date = df['DateTime'].min() if "DateTime" in df.columns else pd.Timestamp.today() - pd.Timedelta(days=30)
     max_date = df['DateTime'].max() if "DateTime" in df.columns else pd.Timestamp.today()
     start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
@@ -129,7 +128,6 @@ def municipal_overview_page():
     if "DateTime" in df.columns:
         df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
 
-    # Municipality filter for detailed metrics
     if "Municipality" in df_filtered_range.columns:
         municipalities = df_filtered_range['Municipality'].dropna().unique()
         selected_municipality = st.selectbox("Select Municipality for Detailed Metrics", municipalities)
@@ -137,13 +135,11 @@ def municipal_overview_page():
     else:
         df_filtered = df_filtered_range
 
-    # Metrics for selected municipality
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df_filtered))
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum())
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum())
 
-    # Mini charts for selected municipality
     if "Leak Type" in df_filtered.columns and not df_filtered.empty:
         bar_data = df_filtered['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -168,7 +164,6 @@ def municipal_overview_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Trend Comparison for all municipalities
     if "Municipality" in df_filtered_range.columns and "DateTime" in df_filtered_range.columns:
         trend_data = df_filtered_range.groupby([df_filtered_range['DateTime'].dt.date, 'Municipality']).size().reset_index(name='Count')
         fig_trend = px.line(
@@ -196,7 +191,6 @@ def dashboard_page():
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # Top 3 municipalities
     if "Municipality" in df.columns:
         top_munis = df['Municipality'].value_counts().head(3)
         st.markdown("### Top 3 Municipalities by Report Count")
@@ -204,7 +198,6 @@ def dashboard_page():
         for idx, (muni, count) in enumerate(top_munis.items()):
             top_cols[idx].metric(muni, count)
 
-    # Leak Type chart
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -216,7 +209,6 @@ def dashboard_page():
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Status pie chart
     if "Status" in df.columns:
         pie_data = df['Status'].value_counts().reset_index()
         pie_data.columns = ['Status', 'Count']
@@ -228,7 +220,6 @@ def dashboard_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Timeline
     if "DateTime" in df.columns:
         time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
         fig_time = px.line(time_data, x='DateTime', y='Count',
@@ -241,6 +232,11 @@ def dashboard_page():
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
+    # Check admin session safely
+    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
+        st.warning("Please log in to view this page.")
+        return
+
     st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
