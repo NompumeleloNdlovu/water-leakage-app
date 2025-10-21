@@ -4,11 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import plotly.express as px
 
-# ------------------ SECRETS & CONFIG ------------------
-SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
-SHEET_KEY = st.secrets["general"]["sheet_id"]
-
-# Squilla Fund color palette
+# ------------------ COLORS ------------------
 COLORS = {
     "teal_blue": "#008080",
     "moonstone_blue": "#73A9C2",
@@ -20,43 +16,49 @@ COLORS = {
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(
     page_title="Drop Watch Admin",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    page_icon="💧",
+    layout="wide"
 )
 
+# ------------------ STYLES ------------------
 st.markdown(f"""
     <style>
-    /* Background */
-    .stApp {{
+    .reportview-container {{
         background-color: {COLORS['white_smoke']};
+        color: black;
     }}
-    /* Hide hamburger menu and footer */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
+    .sidebar .sidebar-content {{
+        background-color: {COLORS['teal_blue']};
+        color: white;
+    }}
+    .stButton>button {{
+        background-color: {COLORS['moonstone_blue']};
+        color: white;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 # ------------------ SESSION STATE ------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "page" not in st.session_state:
+    st.session_state.page = "Login"
 
-# ------------------ GOOGLE SHEET ------------------
-scopes = ["https://www.googleapis.com/auth/spreadsheets",
+# ------------------ CREDENTIALS ------------------
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
-
-creds = Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=scopes)
+creds = Credentials.from_service_account_info(st.secrets["google_service_account"], scopes=SCOPES)
 client = gspread.authorize(creds)
+SHEET_NAME = "Sheet1"
+sheet = client.open_by_key(st.secrets["general"]["sheet_id"]).worksheet(SHEET_NAME)
 
-try:
-    sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
-    records = sheet.get_all_records()
-    df = pd.DataFrame(records)
-    df.columns = df.columns.str.strip()  # remove extra spaces
-except Exception as e:
-    st.error(f"Failed to load Google Sheet: {e}")
-    st.stop()
+# ------------------ DATA ------------------
+def load_data():
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    return df
 
-# ------------------ MODERN LOGIN PAGE ------------------
+# ------------------ LOGIN PAGE ------------------
 def login_page():
     st.markdown(
         f"""
@@ -70,111 +72,107 @@ def login_page():
     )
     with st.form("login_form", clear_on_submit=False):
         code = st.text_input("Admin Code", placeholder="Enter your admin code", type="password")
-        submitted = st.form_submit_button("Login", help="Click to login")
+        submitted = st.form_submit_button("Login")
         if submitted:
             if code == st.secrets["general"]["admin_code"]:
                 st.session_state.logged_in = True
+                st.session_state.page = "Dashboard"
                 st.experimental_rerun()
             else:
                 st.error("Invalid admin code")
 
-# ------------------ DASHBOARD ------------------
-def show_dashboard():
-    st.markdown(
-        f"<h2 style='color:{COLORS['teal_blue']}'>Dashboard</h2>", unsafe_allow_html=True
-    )
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Reports", len(df))
-    with col2:
-        st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    with col3:
-        st.metric("Pending", (df["Status"] == "Pending").sum())
+# ------------------ SIDEBAR NAVIGATION ------------------
+def sidebar():
+    st.sidebar.title("Drop Watch Admin")
+    page = st.sidebar.radio("Navigation", ["Dashboard", "Manage Reports", "Logout"])
+    if page == "Logout":
+        st.session_state.logged_in = False
+        st.session_state.page = "Login"
+        st.experimental_rerun()
+    else:
+        st.session_state.page = page
 
-    # Bar Chart
-    bar_data = df['Leak Type'].value_counts().reset_index()
-    bar_data.columns = ['Leak Type', 'Count']
+# ------------------ DASHBOARD ------------------
+def dashboard():
+    st.title("Drop Watch Dashboard")
+    df = load_data()
+    if df.empty:
+        st.info("No reports yet.")
+        return
+
+    # Metrics
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df))
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df["Status"] == "Pending").sum())
+
+    # Bar chart - Leak Type
+    bar_data = df["Leak Type"].value_counts().reset_index()
     fig_bar = px.bar(
         bar_data,
-        x='Leak Type',
-        y='Count',
-        color='Leak Type',
-        color_discrete_sequence=[
-            COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']
-        ],
+        x="index",
+        y="Leak Type",
+        color="index",
+        color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+        labels={"index": "Leak Type", "Leak Type": "Count"},
         title="Leak Reports by Type"
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Pie Chart
-    pie_data = df['Status'].value_counts().reset_index()
-    pie_data.columns = ['Status', 'Count']
+    # Pie chart - Status
+    pie_data = df["Status"].value_counts().reset_index()
     fig_pie = px.pie(
         pie_data,
-        names='Status',
-        values='Count',
-        color='Status',
-        color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+        names="index",
+        values="Status",
+        color="index",
+        color_discrete_sequence=[COLORS['teal_blue'], COLORS['magic_mint']],
         title="Reports by Status"
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Timeline
-    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
-    time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+    # Time chart - Reports over time
+    df["DateTime"] = pd.to_datetime(df["DateTime"])
     fig_time = px.line(
-        time_data,
-        x='DateTime',
-        y='Count',
+        df.groupby(df["DateTime"].dt.date).size().reset_index(name="Count"),
+        x="DateTime",
+        y="Count",
         title="Reports Over Time",
         markers=True,
-        color_discrete_sequence=[COLORS['teal_blue']]
+        color_discrete_sequence=[COLORS['moonstone_blue']]
     )
     st.plotly_chart(fig_time, use_container_width=True)
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports():
-    st.markdown(f"<h2 style='color:{COLORS['teal_blue']}'>Manage Reports</h2>", unsafe_allow_html=True)
+    st.title("Manage Reports")
+    df = load_data()
+    if df.empty:
+        st.info("No reports to manage.")
+        return
+
     for i, row in df.iterrows():
         with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
             st.write(row)
-            current_status = row["Status"]
-            try:
-                new_status = st.selectbox(
-                    "Update Status",
-                    ["Pending", "Resolved"],
-                    index=["Pending", "Resolved"].index(current_status),
-                    key=f"status_{i}"
-                )
-            except ValueError:
-                new_status = current_status
-            if st.button("Update", key=f"update_{i}"):
-                try:
-                    cell = sheet.find(str(row['ReportID']))
-                    sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
-                    st.success(f"Status updated to {new_status}")
-                except Exception as e:
-                    st.error(f"Failed to update status: {e}")
+            status_options = ["Pending", "Resolved"]
+            current_status = row.get("Status", "Pending")
+            if current_status not in status_options:
+                current_status = "Pending"
+            new_status = st.selectbox("Update Status", status_options, index=status_options.index(current_status), key=f"status_{i}")
+            if st.button("Update", key=f"btn_{i}"):
+                sheet.update_cell(i+2, df.columns.get_loc("Status")+1, new_status)
+                st.success("Status updated!")
 
 # ------------------ MAIN ------------------
-if not st.session_state.logged_in:
-    login_page()
-else:
-    st.sidebar.markdown(
-        f"<div style='background-color:{COLORS['teal_blue']};padding:20px;border-radius:10px;'>"
-        f"<h2 style='color:white;text-align:center;'>Drop Watch</h2></div>",
-        unsafe_allow_html=True
-    )
+def main():
+    if not st.session_state.logged_in:
+        login_page()
+    else:
+        sidebar()
+        if st.session_state.page == "Dashboard":
+            dashboard()
+        elif st.session_state.page == "Manage Reports":
+            manage_reports()
 
-    page = st.sidebar.radio(
-        "Navigation",
-        ["Dashboard", "Manage Reports", "Logout"]
-    )
-
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "Manage Reports":
-        manage_reports()
-    elif page == "Logout":
-        st.session_state.logged_in = False
-        st.experimental_rerun()
+if __name__ == "__main__":
+    main()
