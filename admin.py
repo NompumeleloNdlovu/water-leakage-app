@@ -108,29 +108,34 @@ def login_page():
 def municipal_overview_page():
     st.markdown(
         f"<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
-        f"<h1 style='text-align:center;color:black;'>Municipal Overview - Last 30 Days</h1></div>",
+        f"<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>",
         unsafe_allow_html=True
     )
 
-    # Filter last 30 days
-    last_30_days = pd.Timestamp.today() - pd.Timedelta(days=30)
-    df_recent = df[df['DateTime'] >= last_30_days] if "DateTime" in df.columns else df
+    # Date range picker
+    min_date = df['DateTime'].min() if "DateTime" in df.columns else pd.Timestamp.today() - pd.Timedelta(days=30)
+    max_date = df['DateTime'].max() if "DateTime" in df.columns else pd.Timestamp.today()
+    start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
 
-    # Municipality filter
-    if "Municipality" in df_recent.columns:
-        municipalities = df_recent['Municipality'].dropna().unique()
-        selected_municipality = st.selectbox("Select Municipality", municipalities)
-        df_filtered = df_recent[df_recent['Municipality'] == selected_municipality]
+    df_filtered_range = df
+    if "DateTime" in df.columns:
+        df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
+
+    # Municipality filter for detailed metrics
+    if "Municipality" in df_filtered_range.columns:
+        municipalities = df_filtered_range['Municipality'].dropna().unique()
+        selected_municipality = st.selectbox("Select Municipality for Detailed Metrics", municipalities)
+        df_filtered = df_filtered_range[df_filtered_range['Municipality'] == selected_municipality]
     else:
-        df_filtered = df_recent
+        df_filtered = df_filtered_range
 
-    # Metrics
+    # Metrics for selected municipality
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df_filtered))
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum())
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum())
 
-    # Mini charts
+    # Mini charts for selected municipality
     if "Leak Type" in df_filtered.columns and not df_filtered.empty:
         bar_data = df_filtered['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -155,6 +160,20 @@ def municipal_overview_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
+    # ------------------ Trend Comparison for all municipalities ------------------
+    if "Municipality" in df_filtered_range.columns and "DateTime" in df_filtered_range.columns:
+        trend_data = df_filtered_range.groupby([df_filtered_range['DateTime'].dt.date, 'Municipality']).size().reset_index(name='Count')
+        fig_trend = px.line(
+            trend_data,
+            x='DateTime',
+            y='Count',
+            color='Municipality',
+            markers=True,
+            title=f"Reports Trend ({start_date} to {end_date})",
+            color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']]
+        )
+        st.plotly_chart(fig_trend, use_container_width=True)
+
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
     st.markdown(
@@ -169,6 +188,15 @@ def dashboard_page():
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
 
+    # Top 3 municipalities
+    if "Municipality" in df.columns:
+        top_munis = df['Municipality'].value_counts().head(3)
+        st.markdown("### Top 3 Municipalities by Report Count")
+        top_cols = st.columns(3)
+        for idx, (muni, count) in enumerate(top_munis.items()):
+            top_cols[idx].metric(muni, count)
+
+    # Leak Type chart
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
@@ -182,6 +210,7 @@ def dashboard_page():
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
+    # Status pie chart
     if "Status" in df.columns:
         pie_data = df['Status'].value_counts().reset_index()
         pie_data.columns = ['Status', 'Count']
@@ -193,6 +222,7 @@ def dashboard_page():
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
+    # Timeline
     if "DateTime" in df.columns:
         time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
         fig_time = px.line(time_data, x='DateTime', y='Count',
