@@ -4,114 +4,146 @@ import gspread
 from google.oauth2.service_account import Credentials
 import plotly.express as px
 
-# --- Squilla Fund Colors ---
-TEAL_BLUE = "#008080"
-MOONSTONE_BLUE = "#73A9C2"
-POWDER_BLUE = "#B0E0E6"
-MAGIC_MINT = "#AAF0D1"
-WHITE_SMOKE = "#F5F5F5"
+# ---------------------------
+# App configuration
+# ---------------------------
+st.set_page_config(page_title="Water Leakage Admin Dashboard", layout="wide")
 
-COLOR_PALETTE = [TEAL_BLUE, MOONSTONE_BLUE, POWDER_BLUE, MAGIC_MINT]
+# ---------------------------
+# Squilla Fund color palette
+# ---------------------------
+PALETTE = {
+    "TEAL_BLUE": "#008080",
+    "MOONSTONE_BLUE": "#73A9C2",
+    "POWDER_BLUE": "#B0E0E6",
+    "MAGIC_MINT": "#AAF0D1",
+    "WHITE_SMOKE": "#F5F5F5"
+}
 
-# --- App Styling ---
-st.set_page_config(page_title="Water Leakage Admin", layout="wide")
 st.markdown(
     f"""
     <style>
-        .css-18e3th9 {{background-color: {WHITE_SMOKE};}}
-        .css-1d391kg {{background-color: {TEAL_BLUE};}}
-        .stButton>button {{background-color: {MOONSTONE_BLUE}; color: black;}}
-        .stMetricValue {{color: black;}}
-        .stText {{color: black;}}
+    .css-1d391kg {{background-color: {PALETTE['WHITE_SMOKE']};}}
+    .css-1d391kg .stSidebar {{background-color: {PALETTE['TEAL_BLUE']}; color: black;}}
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
 
-# --- Load Google Sheet ---
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_info(st.secrets["google_service_account"], scopes=SCOPES)
+# ---------------------------
+# Google Sheets setup
+# ---------------------------
+SCOPE = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+# Load credentials from secrets
+creds_dict = st.secrets["google_service_account"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
 client = gspread.authorize(creds)
 
 SHEET_NAME = "WaterLeakReports"
-SHEET_TAB = "Sheet1"
-
 try:
-    sheet = client.open(SHEET_NAME).worksheet(SHEET_TAB)
+    sheet = client.open(SHEET_NAME).worksheet("Sheet1")
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    df.columns = df.columns.str.strip()
 except Exception as e:
     st.error(f"Failed to load Google Sheet: {e}")
     st.stop()
 
-# --- Functions ---
-def update_status(row_index, new_status):
-    try:
-        cell = f"I{row_index + 2}"  # Column I = Status
-        sheet.update(cell, new_status)
-        df.loc[row_index, "Status"] = new_status
-        st.success(f"Report {row_index + 1} status updated to {new_status}")
-    except Exception as e:
-        st.error(f"Failed to update status: {e}")
+# ---------------------------
+# Sidebar navigation
+# ---------------------------
+page = st.sidebar.radio("Navigation", ["Dashboard", "Manage Reports"])
 
-def dashboard(df):
-    st.title("Water Leakage Admin Dashboard")
+# ---------------------------
+# Dashboard page
+# ---------------------------
+def dashboard():
+    st.title("Water Leakage Dashboard")
 
-    # --- Metrics ---
+    if df.empty:
+        st.warning("No data available.")
+        return
+
+    # Summary metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df))
     col2.metric("Resolved", (df["Status"] == "Resolved").sum())
     col3.metric("Pending", (df["Status"] == "Pending").sum())
 
-    # --- Charts ---
-    st.subheader("Leak Reports by Type")
+    # Bar chart: Leak Type
+    bar_colors = [PALETTE["TEAL_BLUE"], PALETTE["MOONSTONE_BLUE"], PALETTE["POWDER_BLUE"], PALETTE["MAGIC_MINT"]]
+    bar_data = df["Leak Type"].value_counts().reset_index()
+    bar_data.columns = ["Leak Type", "Count"]
     fig_bar = px.bar(
-        df['Leak Type'].value_counts().reset_index(),
-        x='index', y='Leak Type',
-        color='index',
-        color_discrete_sequence=COLOR_PALETTE,
-        labels={'index':'Leak Type', 'Leak Type':'Count'},
+        bar_data,
+        x="Leak Type",
+        y="Count",
+        color="Leak Type",
+        color_discrete_sequence=bar_colors,
         title="Leak Reports by Type"
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.subheader("Leak Reports Status Distribution")
+    # Pie chart: Status
+    pie_data = df["Status"].value_counts().reset_index()
+    pie_data.columns = ["Status", "Count"]
     fig_pie = px.pie(
-        df['Status'].value_counts().reset_index(),
-        names='index',
-        values='Status',
-        color='index',
-        color_discrete_sequence=COLOR_PALETTE,
-        title="Reports by Status"
+        pie_data,
+        values="Count",
+        names="Status",
+        color_discrete_sequence=bar_colors,
+        title="Report Status Distribution"
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    st.subheader("Reports Over Time")
-    if 'DateTime' in df.columns:
-        df['DateTime'] = pd.to_datetime(df['DateTime'])
-        fig_line = px.line(
-            df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count'),
-            x='DateTime', y='Count',
-            title="Reports Over Time",
-            markers=True
-        )
-        st.plotly_chart(fig_line, use_container_width=True)
+    # Time series chart: Reports over time
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+    time_data = df.groupby(df["DateTime"].dt.date).size().reset_index(name="Count")
+    fig_time = px.line(
+        time_data,
+        x="DateTime",
+        y="Count",
+        title="Reports Over Time",
+        markers=True
+    )
+    st.plotly_chart(fig_time, use_container_width=True)
 
-def manage_reports(df):
-    st.subheader("Manage Reports")
+# ---------------------------
+# Manage Reports page
+# ---------------------------
+def manage_reports():
+    st.title("Manage Reports")
+
+    if df.empty:
+        st.warning("No reports to manage.")
+        return
+
     for i, row in df.iterrows():
-        with st.expander(f"Report #{row.get('ReportID', i+1)} — {row.get('Location','Unknown')}"):
-            st.write(row.to_dict())
-            new_status = st.selectbox("Update Status", ["Pending", "Resolved"], key=f"status_{i}")
-            if st.button("Update", key=f"btn_{i}"):
-                update_status(i, new_status)
+        report_id = row.get("ReportID", i+1)
+        location = row.get("Location", "Unknown")
+        status = row.get("Status", "Pending")
+        with st.expander(f"Report #{report_id} — {location}"):
+            st.write(row)
+            new_status = st.selectbox("Update Status", ["Pending", "Resolved"], index=["Pending", "Resolved"].index(status))
+            if st.button(f"Update Report #{report_id}"):
+                try:
+                    cell = sheet.find(str(report_id))
+                    sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
+                    st.success(f"Status updated to {new_status}")
+                except Exception as e:
+                    st.error(f"Failed to update status: {e}")
 
-# --- Sidebar Navigation ---
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Dashboard", "Manage Reports"])
+# ---------------------------
+# Main app logic
+# ---------------------------
+def main():
+    if page == "Dashboard":
+        dashboard()
+    elif page == "Manage Reports":
+        manage_reports()
 
-# --- Main ---
-if page == "Dashboard":
-    dashboard(df)
-elif page == "Manage Reports":
-    manage_reports(df)
+if __name__ == "__main__":
+    main()
