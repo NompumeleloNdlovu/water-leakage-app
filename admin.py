@@ -9,69 +9,33 @@ import io
 
 # --- CONFIG ---
 st.set_page_config(page_title="Drop Watch SA Admin Panel", layout="wide")
-
-# --- GOOGLE SHEETS SETUP ---
 SHEET_NAME = "WaterLeakReports"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "waterleakagereport-a7293c7d9ebe.json"
-ADMIN_CODE = "admin123"  # change this
+ADMIN_CODE = "admin123"  # Change this
 
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).sheet1
+# --- GOOGLE SHEETS SETUP ---
+try:
+    # Load credentials from Streamlit Secrets
+    creds_dict = st.secrets["google"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    client = gspread.authorize(creds)
+    sheet = client.open(SHEET_NAME).sheet1
+except gspread.SpreadsheetNotFound:
+    st.error(f"Spreadsheet '{SHEET_NAME}' not found. Please check the name and share it with the service account.")
+    st.stop()
+except Exception as e:
+    st.error(f"Failed to connect to Google Sheets: {e}")
+    st.stop()
 
 # --- HEADER + FOOTER ---
 def show_header_footer():
     st.markdown("""
         <style>
-            /* HEADER */
-            .header {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-                background: linear-gradient(90deg, #0d6efd, #0b5ed7);
-                color: white;
-                padding: 18px 0;
-                font-family: 'Cinzel', serif;
-                font-weight: 600;
-                font-size: 26px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-                z-index: 999;
-            }
-            .header a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: white !important;
-                text-decoration: none !important;
-            }
-            .header img {
-                height: 45px;
-                width: auto;
-                border-radius: 6px;
-            }
+            .header {position: fixed; top: 0; left: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(90deg, #0d6efd, #0b5ed7); color: white; padding: 18px 0; font-family: 'Cinzel', serif; font-weight: 600; font-size: 26px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); z-index: 999;}
+            .header a {display: flex; align-items: center; gap: 12px; color: white !important; text-decoration: none !important;}
+            .header img {height: 45px; width: auto; border-radius: 6px;}
             .header-spacer { height: 90px; }
-
-            /* FOOTER */
-            .footer {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                background: #0d6efd;
-                color: white;
-                text-align: center;
-                padding: 10px 0;
-                font-family: 'Cinzel', serif;
-                font-size: 14px;
-                box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
-                z-index: 999;
-            }
+            .footer {position: fixed; bottom: 0; left: 0; width: 100%; background: #0d6efd; color: white; text-align: center; padding: 10px 0; font-family: 'Cinzel', serif; font-size: 14px; box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15); z-index: 999;}
             .footer-spacer { height: 40px; }
         </style>
 
@@ -91,17 +55,47 @@ def show_header_footer():
 
 # --- LOAD DATA ---
 def load_data():
-    data = sheet.get_all_records()
-    return pd.DataFrame(data)
+    try:
+        data = sheet.get_all_records()
+        if not data:
+            # Empty sheet, return DataFrame with correct headers
+            return pd.DataFrame(columns=["ReportID","Name","Contact","Municipality","Leak Type","Location","DateTime","Status","Image"])
+        return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"Failed to load data from Google Sheets: {e}")
+        return pd.DataFrame()
 
 # --- UPDATE STATUS ---
 def update_status(index, new_status):
     df = load_data()
-    if 0 <= index < len(df):
-        cell = f"H{index + 2}"  # assuming column H = Status
+    if df.empty or not (0 <= index < len(df)):
+        st.warning("No data or invalid row index.")
+        return False
+
+    # Find column index dynamically
+    try:
+        status_col_idx = df.columns.get_loc("Status") + 1  # Google Sheets 1-indexed
+    except KeyError:
+        st.error("⚠️ 'Status' column not found in the sheet.")
+        return False
+
+    # Convert column index to letter (A-Z, AA, etc.)
+    def colnum_to_letter(n):
+        string = ""
+        while n > 0:
+            n, remainder = divmod(n-1, 26)
+            string = chr(65 + remainder) + string
+        return string
+
+    col_letter = colnum_to_letter(status_col_idx)
+    cell = f"{col_letter}{index + 2}"  # +2 because row 1 = header
+
+    try:
         sheet.update(cell, new_status)
         return True
-    return False
+    except Exception as e:
+        st.error(f"Failed to update status: {e}")
+        return False
 
 # --- LOGIN PAGE ---
 def login_page():
@@ -109,47 +103,13 @@ def login_page():
 
     st.markdown("""
         <style>
-            .login-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 75vh;
-                text-align: center;
-            }
-            .login-card {
-                background: white;
-                padding: 40px;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                width: 380px;
-                text-align: center;
-            }
-            .login-card h2 {
-                font-family: 'Cinzel', serif;
-                font-weight: 600;
-                color: #0d6efd;
-                margin-bottom: 10px;
-            }
-            .login-card img {
-                height: 80px;
-                margin-bottom: 15px;
-            }
-            .stTextInput input {
-                border-radius: 8px !important;
-                padding: 10px !important;
-                font-size: 16px !important;
-            }
-            div.stButton > button {
-                width: 100%;
-                border-radius: 8px !important;
-                font-weight: 600;
-                background-color: #0d6efd !important;
-                color: white !important;
-            }
-            div.stButton > button:hover {
-                background-color: #0b5ed7 !important;
-            }
+            .login-container {display: flex; flex-direction: column; align-items: center; justify-content: center; height: 75vh; text-align: center;}
+            .login-card {background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 380px; text-align: center;}
+            .login-card h2 {font-family: 'Cinzel', serif; font-weight: 600; color: #0d6efd; margin-bottom: 10px;}
+            .login-card img {height: 80px; margin-bottom: 15px;}
+            .stTextInput input {border-radius: 8px !important; padding: 10px !important; font-size: 16px !important;}
+            div.stButton > button {width: 100%; border-radius: 8px !important; font-weight: 600; background-color: #0d6efd !important; color: white !important;}
+            div.stButton > button:hover {background-color: #0b5ed7 !important;}
         </style>
         <div class="login-container">
             <div class="login-card">
@@ -165,7 +125,7 @@ def login_page():
         if code == ADMIN_CODE:
             st.session_state["logged_in"] = True
             st.success("✅ Login successful! Redirecting...")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("❌ Invalid admin code")
     st.stop()
@@ -181,9 +141,9 @@ def manage_reports():
         return
 
     for i, row in df.iterrows():
-        with st.expander(f"📍 Report #{i+1} — {row.get('Location', 'Unknown')}"):
+        with st.expander(f" Report #{i+1} — {row.get('Location', 'Unknown')}"):
             st.write(f"**Description:** {row.get('Description', 'N/A')}")
-            st.write(f"**Date:** {row.get('Timestamp', 'N/A')}")
+            st.write(f"**Date:** {row.get('DateTime', 'N/A')}")
             st.write(f"**Status:** {row.get('Status', 'Pending')}")
 
             # Show image/video if available
@@ -195,18 +155,18 @@ def manage_reports():
                     st.image(image_url, caption="Leak Evidence", use_container_width=True)
 
             # Update status
-            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}")
+            new_status = st.selectbox("Update Status", ["Pending", "In Progress", "Resolved"], key=f"status_{i}", index=["Pending","In Progress","Resolved"].index(row.get("Status","Pending")))
             if st.button("Save Update", key=f"save_{i}"):
                 success = update_status(i, new_status)
                 if success:
-                    st.success("✅ Status updated successfully!")
+                    st.success(" Status updated successfully!")
                 else:
-                    st.error("⚠️ Failed to update status.")
+                    st.error(" Failed to update status.")
 
 # --- DASHBOARD PAGE ---
 def dashboard():
     show_header_footer()
-    st.title("📊 Dashboard Overview")
+    st.title(" Dashboard Overview")
     df = load_data()
 
     if df.empty:
@@ -237,8 +197,8 @@ def main():
         manage_reports()
     elif page == "Logout":
         st.session_state["logged_in"] = False
-        st.rerun()
-
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
+
