@@ -352,32 +352,35 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
-# ------------------ MANAGE REPORTS ------------------
-import streamlit as st
-
 def manage_reports_page(df, sheet):
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Page background
+    # Full-width background image
     st.markdown(
         f"""
-        <div style="
+        <style>
+        .full-bg {{
             background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
             background-size: cover;
             background-attachment: fixed;
             background-position: center;
-            background-repeat: no-repeat;
             padding: 20px;
             border-radius: 15px;
+        }}
+        .report-box {{
             background-color: rgba(255,255,255,0.85);
-        ">
-        """,
-        unsafe_allow_html=True
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }}
+        </style>
+        """, unsafe_allow_html=True
     )
 
-    st.markdown("<h2 style='text-align:center;color:black;'>Manage Reports</h2>", unsafe_allow_html=True)
+    st.markdown('<div class="full-bg">', unsafe_allow_html=True)
+    st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
     df_admin = df[df['Municipality'] == admin_muni]
@@ -387,26 +390,23 @@ def manage_reports_page(df, sheet):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # Loop through each report
     for idx, row in df_admin.iterrows():
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
-        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
-
-            # Display report details (exclude ImageURL)
+        with st.expander(f"Report #{row['Reference']} — {row.get('Location','N/A')}"):
+            # Report container
+            st.markdown(f'<div class="report-box" style="border-left: 8px solid {severity_color};">', unsafe_allow_html=True)
+            
+            # Display main report info excluding ImageURL
             st.write(row.drop(labels=['ImageURL'], errors='ignore'))
 
-            # Display uploaded image
-            image_path = row.get("ImageURL")
-            if image_path and isinstance(image_path, str) and image_path.strip():
-                try:
-                    st.image(image_path, caption=f"Report {row['ReportID']} Image", use_column_width=True)
-                except:
-                    st.markdown(f"[View Image]({image_path})", unsafe_allow_html=True)
+            # Display uploaded image if available
+            image_path = row.get("ImageURL", "")
+            if image_path and os.path.exists(image_path):
+                st.image(image_path, caption=f"Report {row['Reference']} Image", use_column_width=True)
             else:
                 st.info("No image uploaded for this report.")
-
-            st.markdown("</div>", unsafe_allow_html=True)
 
             # Status update dropdown
             current_status = row.get("Status", "Pending")
@@ -414,17 +414,17 @@ def manage_reports_page(df, sheet):
             if current_status not in options:
                 current_status = "Pending"
 
-            new_status = st.selectbox(
-                "Update Status", options, index=options.index(current_status), key=f"status_{idx}"
-            )
+            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
-                    cell = sheet.find(str(row['ReportID']))
+                    cell = sheet.find(str(row['Reference']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
