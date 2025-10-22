@@ -29,7 +29,7 @@ if "page" not in st.session_state: st.session_state.page = "Home"
 def logout():
     st.session_state.logged_in = False
     st.session_state.page = "Login"
-    st.success("You have been logged out.")
+    st.experimental_rerun()  # Immediately refresh page after logout
 
 
 # ------------------ BACKGROUND IMAGE ------------------
