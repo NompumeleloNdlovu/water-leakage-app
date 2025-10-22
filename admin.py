@@ -396,6 +396,6 @@ if not st.session_state.logged_in:
 else:
     custom_sidebar()
     if st.session_state.page == "Home": home_page(df)
-    elif st.session_state.page == "Municipal Overview": municipal_overview_page()
+    elif st.session_state.page == "Municipal Overview": municipal_overview_page(df)
     elif st.session_state.page == "Dashboard": dashboard_page()
     elif st.session_state.page == "Manage Reports": manage_reports_page()
