@@ -382,10 +382,22 @@ def manage_reports_page():
         st.warning("Please log in to view this page.")
         return
 
-    # Set page background
-    set_bg_image("images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg")
+    # Page-level background with semi-transparent overlay
+    st.markdown(
+        f"""
+        <div style="
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            padding: 15px;
+            border-radius: 15px;
+            background-color: rgba(255,255,255,0.85);
+        ">
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown('<div class="manage-reports-container">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -402,10 +414,10 @@ def manage_reports_page():
 
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
             # Display main report info
-            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:8px;'>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
             st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
 
-            # Display report image if available
+            # Display report images if available
             image_url = row.get("ImageURL")
             if image_url and isinstance(image_url, str) and image_url.strip():
                 st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
@@ -427,12 +439,12 @@ def manage_reports_page():
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-            # Decorative mid-page image after half of reports
+            # Add mid-page decorative image halfway through the reports
             if idx == len(df_admin)//2:
                 st.markdown(
                     "<div style='text-align:center;margin:20px 0;'>"
                     f"<img src='images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg' "
-                    "style='width:70%;border-radius:15px;' />"
+                    "style='width:75%;border-radius:20px;border:5px solid #555;' />"
                     "</div>",
                     unsafe_allow_html=True
                 )
