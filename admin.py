@@ -354,18 +354,32 @@ def dashboard_page():
 # ------------------ MANAGE REPORTS ------------------
 import streamlit as st
 import os
+import base64
 
 def manage_reports_page(df, sheet):
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
+    # Full-width fixed background
     st.markdown(
-        "<div style='background-image:url(\"images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg\");"
-        "background-size:cover;background-attachment:fixed;padding:15px;border-radius:15px;'>",
+        f"""
+        <style>
+        .manage-reports-bg {{
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            padding: 20px;
+            border-radius: 15px;
+        }}
+        </style>
+        <div class="manage-reports-bg">
+        """,
         unsafe_allow_html=True
     )
-    st.markdown("## Manage Reports")
+
+    st.markdown("<h2 style='text-align:center;color:black;'>Manage Reports</h2>", unsafe_allow_html=True)
 
     admin_muni = st.session_state.admin_municipality
     df_admin = df[df['Municipality'] == admin_muni]
@@ -378,16 +392,25 @@ def manage_reports_page(df, sheet):
     for idx, row in df_admin.iterrows():
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
-        with st.expander(f"Report #{row['Reference']} — {row.get('Location','N/A')}"):
-            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
+        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
+            # Main report info
+            st.markdown(
+                f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>",
+                unsafe_allow_html=True
+            )
+            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude ImageURL from table
 
-            # Show uploaded image if exists
-            image_path = row.get("ImageURL", "")
-            if image_path and os.path.exists(image_path):
-                st.image(image_path, caption=f"Report {row['Reference']} Image", use_column_width=True)
+            # Display uploaded image if available
+            image_url = row.get("ImageURL")
+            if image_url and isinstance(image_url, str) and image_url.strip():
+                # Check if the path is local
+                if os.path.exists(image_url):
+                    st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+                else:
+                    # Show as URL if local file not found
+                    st.markdown(f"[View Uploaded Image]({image_url})")
             else:
-                st.markdown("<i>No image uploaded for this report.</i>", unsafe_allow_html=True)
+                st.info("No image uploaded for this report.")
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -396,11 +419,10 @@ def manage_reports_page(df, sheet):
             options = ["Pending", "Resolved"]
             if current_status not in options:
                 current_status = "Pending"
-
             new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
-                    cell = sheet.find(str(row['Reference']))
+                    cell = sheet.find(str(row['ReportID']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
@@ -408,6 +430,7 @@ def manage_reports_page(df, sheet):
                     st.error(f"Failed to update status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ------------------ SIDEBAR ------------------
