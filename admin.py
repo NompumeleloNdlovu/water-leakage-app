@@ -359,6 +359,7 @@ def manage_reports_page(df, sheet):
         st.warning("Please log in to view this page.")
         return
 
+    # Full-page background with semi-transparent overlay
     st.markdown(
         """
         <div style="
@@ -389,17 +390,37 @@ def manage_reports_page(df, sheet):
 
     for idx, row in df_admin.iterrows():
         with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
-            # Drop image-related columns so "Image" does not appear
+            # Determine row color based on status
+            status = row.get("Status", "Pending")
+            color = "#ffcccc" if status == "Pending" else "#ccffcc"
+
+            # Display report info in a colored box
+            st.markdown(
+                f"<div style='background-color:{color};padding:10px;border-radius:10px;'>",
+                unsafe_allow_html=True
+            )
+
+            # Drop image-related columns so they don't appear in main table
             display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
             st.write(display_row)
 
-            # Status update
-            current_status = row.get("Status", "Pending")
-            options = ["Pending", "Resolved"]
-            if current_status not in options:
-                current_status = "Pending"
+            # Display clickable image URL if available
+            image_url = row.get("ImageURL")
+            if image_url and isinstance(image_url, str) and image_url.strip():
+                st.markdown(
+                    f'<a href="{image_url}" target="_blank">View Uploaded Image</a>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown("_No image uploaded for this report._", unsafe_allow_html=True)
 
-            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Status update
+            options = ["Pending", "Resolved"]
+            if status not in options:
+                status = "Pending"
+            new_status = st.selectbox("Update Status", options, index=options.index(status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
                     cell = sheet.find(str(row[report_id_col]))
@@ -410,6 +431,7 @@ def manage_reports_page(df, sheet):
                     st.error(f"Failed to update status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ------------------ SIDEBAR ------------------
