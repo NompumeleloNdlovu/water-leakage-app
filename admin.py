@@ -481,32 +481,51 @@ def manage_reports_page(df, sheet):
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
-    set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
-                         show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], sidebar=True)
+    set_background_local(
+        "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
+        show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], 
+        sidebar=True
+    )
 
-    st.sidebar.markdown(f"<div style='background-color: rgba(255,255,255,0.8); padding:15px;border-radius:10px;text-align:center;'>"
-                        f"<h3 style='color:black;'>Drop Watch SA</h3></div>", unsafe_allow_html=True)
+    st.sidebar.markdown(
+        f"<div style='background-color: rgba(255,255,255,0.8); padding:15px;border-radius:10px;text-align:center;'>"
+        f"<h3 style='color:black;'>Drop Watch SA</h3></div>", 
+        unsafe_allow_html=True
+    )
 
     if st.sidebar.button("Home"): st.session_state.page = "Home"
     if st.sidebar.button("Municipal Overview"): st.session_state.page = "Municipal Overview"
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
+
     if st.session_state.logged_in:
-       if st.sidebar.button("Logout"):
-        logout()
-        # Safe place to rerun: directly after logout
-        st.experimental_rerun()
+        if st.sidebar.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.page = "Login"
+            st.success("You have been logged out.")
+            # do NOT call st.experimental_rerun() here
+
+
 
 
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
-    st.session_state.page = "Login"
     set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg", show_on_page=["Login"])
     login_page()
 else:
     custom_sidebar()
-    if st.session_state.page == "Home": home_page(df)
-    elif st.session_state.page == "Municipal Overview": municipal_overview_page(df)
-    elif st.session_state.page == "Dashboard": dashboard_page()
-    elif st.session_state.page == "Manage Reports": manage_reports_page(df, sheet)
+
+    # Check which page to render
+    if st.session_state.page == "Home":
+        home_page(df)
+    elif st.session_state.page == "Municipal Overview":
+        municipal_overview_page(df)
+    elif st.session_state.page == "Dashboard":
+        dashboard_page()
+    elif st.session_state.page == "Manage Reports":
+        manage_reports_page(df, sheet)
+
+    # If just logged out, rerun safely
+    if not st.session_state.logged_in:
+        st.experimental_rerun()
