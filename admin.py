@@ -90,6 +90,23 @@ except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
     st.stop()
 
+# ------------------ LOGIN LOGIC ------------------
+def login_user(code):
+    """
+    Authenticate admin and set session state.
+    """
+    admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
+    if not admin_info.empty:
+        st.session_state.logged_in = True
+        st.session_state.admin_name = admin_info.iloc[0]['AdminName']
+        st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
+        st.session_state.page = "Home"
+        # Optional: store login time
+        st.session_state.last_login = datetime.now()
+        return True
+    else:
+        return False
+
 # ------------------ AUTHENTICATION ------------------
 def login_page():
     st.markdown(f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
