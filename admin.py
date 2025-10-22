@@ -99,8 +99,7 @@ def login_page():
             st.error("Invalid code")
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
-def home_page():
-    df = load_reports()  # replace with your function to load the reports dataframe
+def home_page(df):
     if df.empty:
         st.warning("No reports found yet.")
         return
@@ -314,6 +313,21 @@ def home_page():
                 title=f"Status Breakdown - {selected_municipality}"
             )
             st.plotly_chart(fig_pie, use_container_width=True)
+
+        # Reports Over Time
+        st.markdown("### Reports Over Time")
+        if "DateTime" in df_filtered.columns:
+            time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
+            fig_line = px.line(
+                time_data,
+                x='DateTime',
+                y='Count',
+                title=f"Reports Over Time - {selected_municipality}",
+                markers=True,
+                color_discrete_sequence=[COLORS['teal_blue']]
+            )
+            st.plotly_chart(fig_line, use_container_width=True)
+
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page():
