@@ -90,6 +90,7 @@ except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
     st.stop()
 
+
 # ------------------ LOGIN LOGIC ------------------
 def login_user(code):
     """
@@ -101,11 +102,10 @@ def login_user(code):
         st.session_state.admin_name = admin_info.iloc[0]['AdminName']
         st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
         st.session_state.page = "Home"
-        # Optional: store login time
         st.session_state.last_login = datetime.now()
-        return True
+        st.experimental_rerun()  # Immediately refresh page after login
     else:
-        return False
+        st.error("Invalid code")
 
 # ------------------ AUTHENTICATION ------------------
 def login_page():
@@ -118,20 +118,8 @@ def login_page():
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
 
-    # Use a callback function to handle login
-    def attempt_login():
-        admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
-        if not admin_info.empty:
-            st.session_state.logged_in = True
-            st.session_state.admin_name = admin_info.iloc[0]['AdminName']
-            st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
-            st.session_state.page = "Home"
-            st.experimental_rerun()  # safe to call here
-        else:
-            st.error("Invalid code")
-
-    # Only trigger login when the button is pressed
-    st.button("Login", on_click=attempt_login)
+    # Button triggers login_user with the entered code
+    st.button("Login", on_click=login_user, args=(code,))
 
 
 
@@ -471,6 +459,7 @@ def manage_reports_page(df, sheet):
 
 
 
+
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
     set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
@@ -484,9 +473,7 @@ def custom_sidebar():
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
     if st.session_state.logged_in:
-        if st.sidebar.button("Logout"):
-            logout()
-
+        st.sidebar.button("Logout", on_click=logout)
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
