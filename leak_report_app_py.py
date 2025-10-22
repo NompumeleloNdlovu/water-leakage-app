@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-"""leak_report_app.py"""
-
 import streamlit as st
 import os
 import re
@@ -33,7 +31,7 @@ def save_report_to_sheet(report):
         report["Location"],
         report["DateTime"],
         report["Status"],
-        report.get("ImageURL", "")  # <-- store uploaded image path
+        report.get("ImageURL", "")
     ]
     sheet.append_row(row)
 
@@ -49,7 +47,7 @@ def send_reference_email(to_email, ref_code, name):
 
     sender_email = "leak-reporter@municipality.org"
     subject = "Your Water Leak Report - Reference Code"
-    
+
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = sender_email
@@ -57,7 +55,7 @@ def send_reference_email(to_email, ref_code, name):
     msg.set_content(
         f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\n\nUse this code in the app to check the status.\n\nRegards,\nMunicipal Water Department"
     )
-    
+
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as smtp:
             smtp.login(smtp_user, smtp_password)
@@ -72,7 +70,6 @@ st.title("🚰 Water Leakage Reporting")
 
 tabs = st.tabs(["📤 Submit Report", "📄 Check Status"])
 
-# ------------------ Submit Report ------------------
 with tabs[0]:
     st.subheader("Report a Leak")
     st.markdown("👥 **Help your community by reporting water leaks accurately and promptly.**")
@@ -98,16 +95,17 @@ with tabs[0]:
         elif not is_valid_email(contact):
             st.error("❗ Please enter a valid email.")
         else:
+            # Save uploaded image to shared folder
             image_path = ""
             if image:
-                os.makedirs("leak_images", exist_ok=True)
-                image_path = os.path.join(
-                    "leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
-                )
+                os.makedirs("static/leak_images", exist_ok=True)
+                image_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
+                image_path = os.path.join("static/leak_images", image_filename)
                 with open(image_path, "wb") as f:
                     f.write(image.read())
-                st.success(f"Image uploaded successfully: {image_path}")
+                st.success(f"Image uploaded successfully: {image_filename}")
 
+            # Generate reference
             ref_code = str(uuid.uuid4())[:8].upper()
 
             report = {
@@ -119,7 +117,7 @@ with tabs[0]:
                 "Location": location,
                 "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "Status": "Pending",
-                "ImageURL": image_path  # store uploaded image path
+                "ImageURL": image_path
             }
 
             try:
@@ -129,7 +127,6 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
-# ------------------ Check Status ------------------
 with tabs[1]:
     st.subheader("Check Report Status")
     user_ref = st.text_input("Enter Your Reference Code")
@@ -144,8 +141,14 @@ with tabs[1]:
             if match:
                 st.info(f"ℹ️ Status for **{user_ref}**: {match['Status']}")
                 st.write(match)
+
+                # Display uploaded image if available
+                image_path = match.get("ImageURL", "")
+                if image_path and os.path.exists(image_path):
+                    st.image(image_path, caption=f"Report {user_ref} Image", use_column_width=True)
+                else:
+                    st.markdown("<i>No image uploaded for this report.</i>", unsafe_allow_html=True)
             else:
                 st.warning("Reference code not found.")
         except Exception as e:
             st.error(f"Could not check status: {e}")
-
