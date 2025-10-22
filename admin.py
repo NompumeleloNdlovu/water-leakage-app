@@ -99,7 +99,7 @@ def login_user(code):
     Authenticate admin and set session state.
     """
     code = str(code).strip()  # Ensure string and remove spaces
-    admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()  # Clean the dataframe
+    admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()
 
     admin_info = admins_df[admins_df['AdminCode'] == code]
     if not admin_info.empty:
@@ -113,7 +113,6 @@ def login_user(code):
         return False
 
 
-
 # ------------------ AUTHENTICATION ------------------
 def login_page():
     st.markdown(
@@ -125,13 +124,13 @@ def login_page():
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
 
-    def attempt_login():
+    if st.button("Login"):
         if login_user(code):
-            st.experimental_rerun()  # safe to call here
+            # Safe place to rerun: directly after login_user
+            st.experimental_rerun()
         else:
             st.error("Invalid code")
 
-    st.button("Login", on_click=attempt_login)
 
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
