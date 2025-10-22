@@ -102,6 +102,11 @@ def login_page():
 import streamlit as st
 from datetime import datetime, timedelta
 import time
+import base64
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
 
 def home_page(df):
     if df.empty:
@@ -118,14 +123,15 @@ def home_page(df):
         greeting = "Good evening"
 
     # --- Banner with background image ---
-    banner_image = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+    banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+    banner_base64 = get_base64_image(banner_image_path)
 
     st.markdown(
         f"""
         <style>
         .banner {{
             position: relative;
-            background-image: url("{banner_image}");
+            background-image: url("data:image/jpg;base64,{banner_base64}");
             background-size: cover;
             background-position: center;
             height: 250px;
@@ -175,10 +181,8 @@ def home_page(df):
         unsafe_allow_html=True
     )
 
-    # --- Filter by admin municipality ---
-    df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
-
     # --- Metrics calculations ---
+    df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
     pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
@@ -187,7 +191,7 @@ def home_page(df):
     reports_at_login = st.session_state.get("reports_at_login", total_reports)
     new_reports = max(total_reports - reports_at_login, 0)
 
-    # --- Live Counters using Streamlit placeholders ---
+    # --- Live Counters using Streamlit ---
     col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
