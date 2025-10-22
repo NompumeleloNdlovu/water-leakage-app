@@ -278,18 +278,20 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-       # Reports Over Time (Area Chart)
+     # Reports Over Time (Scatter + Trendline)
         st.markdown("### Reports Over Time")
         if "DateTime" in df_filtered.columns:
             time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
-            fig_area = px.area(
+            fig_scatter = px.scatter(
                 time_data,
                 x='DateTime',
                 y='Count',
+                trendline="lowess",  # smooth trend line
                 title=f"Reports Over Time - {admin_muni}",
-                color_discrete_sequence=[COLORS['magic_mint']]
+                color_discrete_sequence=[COLORS['teal_blue']],
+                labels={'Count':'Number of Reports'}
             )
-            st.plotly_chart(fig_area, use_container_width=True)
+            st.plotly_chart(fig_scatter, use_container_width=True)
 
 
 
