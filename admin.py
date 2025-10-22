@@ -357,29 +357,10 @@ def manage_reports_page(df, sheet):
         st.warning("Please log in to view this page.")
         return
 
-    # Full-width background image
     st.markdown(
-        f"""
-        <style>
-        .full-bg {{
-            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-            padding: 20px;
-            border-radius: 15px;
-        }}
-        .report-box {{
-            background-color: rgba(255,255,255,0.85);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }}
-        </style>
-        """, unsafe_allow_html=True
+        "<div style='background-color: rgba(176,224,230,0.8); padding:15px; border-radius:15px;'>",
+        unsafe_allow_html=True
     )
-
-    st.markdown('<div class="full-bg">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -390,25 +371,14 @@ def manage_reports_page(df, sheet):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Loop through each report
     for idx, row in df_admin.iterrows():
-        severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
+        report_id_col = 'ReportID'  # make sure this matches your Google Sheet
+        location_col = 'Location'
 
-        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            # Report container
-            st.markdown(f'<div class="report-box" style="border-left: 8px solid {severity_color};">', unsafe_allow_html=True)
-            
-            # Display main report info excluding ImageURL
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
+        with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
+            st.write(row.drop(labels=['ReportID'], errors='ignore'))  # exclude ID if desired
 
-            # Display uploaded image if available
-            image_path = row.get("ImageURL", "")
-            if image_path and os.path.exists(image_path):
-                st.image(image_path, caption=f"Report {row['ReportID']} Image", use_column_width=True)
-            else:
-                st.info("No image uploaded for this report.")
-
-            # Status update dropdown
+            # Status update
             current_status = row.get("Status", "Pending")
             options = ["Pending", "Resolved"]
             if current_status not in options:
@@ -417,17 +387,14 @@ def manage_reports_page(df, sheet):
             new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
-                    cell = sheet.find(str(row['ReportID']))
+                    cell = sheet.find(str(row[report_id_col]))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 
 # ------------------ SIDEBAR ------------------
