@@ -116,7 +116,7 @@ def login_user(code):
 
 
 # ------------------ AUTHENTICATION ------------------
-# ------------------ LOGIN PAGE ------------------
+
 def login_page():
     st.markdown(
         f"<div style='background-color:{COLORS['teal_blue']};padding:40px;"
@@ -127,6 +127,9 @@ def login_page():
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
 
+    # Add a placeholder for login status message
+    login_status = st.empty()
+
     if st.button("Login"):
         admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
         if not admin_info.empty:
@@ -135,10 +138,11 @@ def login_page():
             st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
             st.session_state.page = "Home"
             st.session_state.last_login = datetime.now()
-            # rerun safely after updating session state
-            st.experimental_rerun()
+            st.session_state._trigger_rerun = True  # mark for rerun next cycle
+            login_status.success("Login successful! Redirecting...")
         else:
-            st.error("Invalid code")
+            login_status.error("Invalid code")
+
 
 
 
@@ -511,12 +515,13 @@ def custom_sidebar():
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
-    set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg", show_on_page=["Login"])
+    set_background_local(
+        "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
+        show_on_page=["Login"]
+    )
     login_page()
 else:
     custom_sidebar()
-
-    # Check which page to render
     if st.session_state.page == "Home":
         home_page(df)
     elif st.session_state.page == "Municipal Overview":
@@ -526,6 +531,7 @@ else:
     elif st.session_state.page == "Manage Reports":
         manage_reports_page(df, sheet)
 
-    # If just logged out, rerun safely
-    if not st.session_state.logged_in:
-        st.experimental_rerun()
+# Handle deferred rerun (safe to call here)
+if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
+    st.session_state._trigger_rerun = False
+    st.experimental_rerun()
