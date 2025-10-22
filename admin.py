@@ -329,30 +329,36 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Reports Over Time (Scatter Plot)
-        if "DateTime" in df_filtered.columns:
-            df_plot = df_filtered.copy()
-            df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
-            df_plot = df_plot.dropna(subset=['DateTime'])
+       # ---------------------- Reports Over Time (Scatter) ----------------------
+if "DateTime" in df.columns and "Municipality" in df.columns:
+    # Filter by logged-in admin's municipality
+    admin_muni = st.session_state.get('admin_municipality', None)
+    if admin_muni:
+        df_plot = df[df['Municipality'] == admin_muni].copy()
+    else:
+        df_plot = df.copy()
 
-            if not df_plot.empty:
-                # Count reports per date
-                time_data = df_plot.groupby(df_plot['DateTime'].dt.date).size().reset_index(name='Count')
-                time_data['Date'] = time_data['DateTime'].astype(str)
+    # Ensure DateTime is proper datetime
+    df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
+    df_plot = df_plot.dropna(subset=['DateTime'])  # Remove invalid dates
 
-                # Scatter plot
-                st.markdown("### Reports Over Time")
-                fig_scatter = px.scatter(
-                    time_data,
-                    x='Date',
-                    y='Count',
-                    title=f"Reports Over Time - {admin_muni}",
-                    color_discrete_sequence=[COLORS['teal_blue']],
-                    labels={'Count': 'Number of Reports', 'Date': 'Date'}
-                )
-                st.plotly_chart(fig_scatter, use_container_width=True)
-            else:
-                st.info("No reports with valid dates to display.")
+    if not df_plot.empty:
+        # Scatter plot: one dot per report
+        fig_scatter = px.scatter(
+            df_plot,
+            x='DateTime',
+            y=[1]*len(df_plot),  # dummy y-axis
+            title=f"Reports Over Time - {admin_muni}",
+            color_discrete_sequence=[COLORS['teal_blue']],
+            labels={'DateTime': 'Submission Time', 'y': 'Reports'}
+        )
+
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:
+        st.info("No reports with valid dates to display.")
+else:
+    st.info("DateTime or Municipality column not found in the dataset.")
+
 
 
 
