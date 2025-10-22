@@ -357,7 +357,10 @@ def manage_reports_page():
         st.warning("Please log in to view this page.")
         return
 
-    st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;margin-top:10px;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;margin-top:10px;'>",
+        unsafe_allow_html=True
+    )
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -368,21 +371,46 @@ def manage_reports_page():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    for i, row in df_admin.iterrows():
+    # Loop through each report
+    for idx, row in df_admin.iterrows():
+        severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
+
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            st.write(row)
+            # Display main report info
+            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:8px;'>", unsafe_allow_html=True)
+            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
+
+            # Display report images if available
+            image_url = row.get("ImageURL")
+            if image_url and isinstance(image_url, str) and image_url.strip():
+                st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Status update
             current_status = row.get("Status", "Pending")
             options = ["Pending", "Resolved"]
-            if current_status not in options: current_status = "Pending"
-            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{i}")
-            if st.button("Update", key=f"update_{i}"):
+            if current_status not in options:
+                current_status = "Pending"
+            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
+            if st.button("Update", key=f"update_{idx}"):
                 try:
                     cell = sheet.find(str(row['ReportID']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
-                    df.at[i, "Status"] = new_status
+                    df.at[idx, "Status"] = new_status
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
+
+            # Add separator after certain number of reports
+            if idx == len(df_admin)//2:
+                st.markdown(
+                    "<div style='text-align:center;margin:20px 0;'>"
+                    f"<img src='images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg' "
+                    "style='width:70%;border-radius:15px;' />"
+                    "</div>",
+                    unsafe_allow_html=True
+                )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ SIDEBAR ------------------
