@@ -326,29 +326,38 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-     # Reports Over Time (Scatter + Trendline)
-        # Ensure DateTime column is datetime
-        df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
-        
-        # Group by date only
-        time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
-        
-        # Convert date to string to remove time in Plotly
-        time_data['Date'] = time_data['DateTime'].astype(str)
-        
-        # Scatter + trendline plot by date
-        fig_scatter = px.scatter(
-            time_data,
-            x='Date',
-            y='Count',
-            trendline="lowess",
-            title=f"Reports Over Time - {st.session_state.admin_municipality}",
-            color_discrete_sequence=[COLORS['teal_blue']],
-            labels={'Count':'Number of Reports', 'Date':'Date'}
-        )
-        
-        st.plotly_chart(fig_scatter, use_container_width=True)
-        
+    # ---------------------- Reports Over Time (Scatter + Trendline) ----------------------
+
+# Ensure DateTime column is valid datetime
+df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
+
+# Drop rows with missing DateTime
+df_filtered = df_filtered.dropna(subset=['DateTime'])
+
+# Group by date only and rename column for plotting
+time_data = (
+    df_filtered.groupby(df_filtered['DateTime'].dt.date)
+    .size()
+    .reset_index(name='Count')
+    .rename(columns={'DateTime': 'Date'})
+)
+
+# Convert date to string for clean x-axis labels
+time_data['Date'] = time_data['Date'].astype(str)
+
+# Create scatter + trendline plot
+fig_scatter = px.scatter(
+    time_data,
+    x='Date',
+    y='Count',
+    trendline="lowess",
+    title=f"Reports Over Time - {st.session_state.admin_municipality}",
+    color_discrete_sequence=[COLORS['teal_blue']],
+    labels={'Count': 'Number of Reports', 'Date': 'Date'}
+)
+
+st.plotly_chart(fig_scatter, use_container_width=True)
+
 
 
 
