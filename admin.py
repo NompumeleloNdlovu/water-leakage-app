@@ -279,19 +279,24 @@ def municipal_overview_page(df):
             st.plotly_chart(fig_pie, use_container_width=True)
 
      # Reports Over Time (Scatter + Trendline)
-        st.markdown("### Reports Over Time")
-        if "DateTime" in df_filtered.columns:
-            time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
-            fig_scatter = px.scatter(
-                time_data,
-                x='DateTime',
-                y='Count',
-                trendline="lowess",  # smooth trend line
-                title=f"Reports Over Time - {admin_muni}",
-                color_discrete_sequence=[COLORS['teal_blue']],
-                labels={'Count':'Number of Reports'}
-            )
-            st.plotly_chart(fig_scatter, use_container_width=True)
+       # Ensure DateTime column is in proper datetime format
+        df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
+        
+        # Group by actual date (ignores time)
+        time_data = df_filtered.groupby(df_filtered['DateTime'].dt.normalize()).size().reset_index(name='Count')
+        
+        # Scatter + Trendline plot
+        fig_scatter = px.scatter(
+            time_data,
+            x='DateTime',
+            y='Count',
+            trendline="lowess",  # smooth trend line
+            title=f"Reports Over Time - {admin_muni}",
+            color_discrete_sequence=[COLORS['teal_blue']],
+            labels={'Count':'Number of Reports'}
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
 
 
 
