@@ -355,69 +355,57 @@ def dashboard_page():
 import streamlit as st
 import base64
 
-# Helper to embed local image as base64
-def get_base64_image(image_file):
-    with open(image_file, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
+# ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    admin_muni = st.session_state.admin_municipality
-    df_admin = df[df['Municipality'] == admin_muni]
-
-    if df_admin.empty:
-        st.info("No reports for your municipality.")
-        return
-
-    # Embed background image as full-width and fixed
-    bg_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
-    b64_bg = get_base64_image(bg_image_path)
+    # Page-level full-width background image with semi-transparent overlay
     st.markdown(
         f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{b64_bg}");
+        <div style="
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-        }}
-        .report-container {{
-            background-color: rgba(255, 255, 255, 0.85);
-            padding: 15px;
+            padding: 20px;
             border-radius: 15px;
-            margin-bottom: 20px;
-        }}
-        .pulse-box {{
-            background-color: #ffcccc;
-            color: #a80000;
-            padding: 10px 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: bold;
-        }}
-        </style>
+            background-color: rgba(255,255,255,0.85);
+        ">
         """,
         unsafe_allow_html=True
     )
 
     st.markdown("## Manage Reports")
 
+    admin_muni = st.session_state.admin_municipality
+    df_admin = df[df['Municipality'] == admin_muni]
+
+    if df_admin.empty:
+        st.info("No reports for your municipality.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
     # Loop through each report
     for idx, row in df_admin.iterrows():
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            st.markdown(f"<div class='report-container' style='background-color:{severity_color};'>", unsafe_allow_html=True)
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
+            # Display main report info
+            st.markdown(
+                f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>",
+                unsafe_allow_html=True
+            )
+            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
 
-            # Display uploaded report image if available
-            image_url = row.get("ImageURL")
-            if image_url and isinstance(image_url, str) and image_url.strip():
-                st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+            # Display uploaded image if available
+            image_data = row.get("ImageURL")
+            if image_data and isinstance(image_data, str) and image_data.strip():
+                try:
+                    st.image(image_data, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+                except Exception as e:
+                    st.warning(f"Could not display image for Report {row['ReportID']}: {e}")
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -436,17 +424,7 @@ def manage_reports_page():
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-            # Mid-page decorative image
-            if idx == len(df_admin)//2:
-                mid_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
-                b64_mid = get_base64_image(mid_image_path)
-                st.markdown(
-                    f"<div style='text-align:center;margin:20px 0;'>"
-                    f"<img src='data:image/jpg;base64,{b64_mid}' style='width:75%;border-radius:20px;border:5px solid #555;' />"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
-
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ------------------ SIDEBAR ------------------
