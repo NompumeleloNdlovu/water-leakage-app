@@ -352,15 +352,28 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
+import streamlit as st
+
 def manage_reports_page(df, sheet):
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
     st.markdown(
-        "<div style='background-color: rgba(176,224,230,0.8); padding:15px; border-radius:15px;'>",
+        """
+        <div style="
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            padding: 15px;
+            border-radius: 15px;
+            background-color: rgba(255,255,255,0.85);
+        ">
+        """,
         unsafe_allow_html=True
     )
+
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -371,12 +384,14 @@ def manage_reports_page(df, sheet):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    for idx, row in df_admin.iterrows():
-        report_id_col = 'ReportID'  # make sure this matches your Google Sheet
-        location_col = 'Location'
+    report_id_col = "ReportID" if "ReportID" in df_admin.columns else "Reference"
+    location_col = "Location"
 
+    for idx, row in df_admin.iterrows():
         with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
-            st.write(row.drop(labels=['ReportID'], errors='ignore'))  # exclude ID if desired
+            # Drop image-related columns so "Image" does not appear
+            display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
+            st.write(display_row)
 
             # Status update
             current_status = row.get("Status", "Pending")
