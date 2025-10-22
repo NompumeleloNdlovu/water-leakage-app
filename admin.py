@@ -454,8 +454,8 @@ def custom_sidebar():
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
     if st.session_state.logged_in:
-    if st.sidebar.button("Logout"):
-        logout()
+        if st.sidebar.button("Logout"):
+            logout()
 
 
 # ------------------ PAGE RENDER ------------------
