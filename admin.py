@@ -225,44 +225,37 @@ def home_page(df):
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page(df):
+    if df.empty:
+        st.warning("No reports found yet.")
+        return
+
+    # Header
     st.markdown(
-        f"<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
-        f"<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>", 
+        "<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+        "<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>",
         unsafe_allow_html=True
     )
 
-    # --- Date range picker ---
-    min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
-    max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
-    start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
-
-    # Filter by date range
-    df_filtered_range = df
-    if "DateTime" in df.columns:
-        df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
-
-    # Filter by logged-in municipality
+    # Filter by logged-in admin's municipality
     admin_muni = st.session_state.admin_municipality
-    if "Municipality" in df_filtered_range.columns:
-        df_filtered = df_filtered_range[df_filtered_range['Municipality'] == admin_muni]
-    else:
-        df_filtered = df_filtered_range
+    df_filtered = df[df['Municipality'] == admin_muni] if "Municipality" in df.columns else df
 
-    # --- Display key metrics ---
+    # Metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df_filtered))
     col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
     col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
 
-    # --- Charts ---
+    # Charts
     if not df_filtered.empty:
+        # Leak Type Distribution
         st.markdown("### Leak Type Distribution")
         if "Leak Type" in df_filtered.columns:
             bar_data = df_filtered['Leak Type'].value_counts().reset_index()
             bar_data.columns = ['Leak Type', 'Count']
             fig_bar = px.bar(
-                bar_data, 
-                x='Leak Type', 
+                bar_data,
+                x='Leak Type',
                 y='Count',
                 color='Leak Type',
                 color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
@@ -270,13 +263,14 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
+        # Status Distribution
         st.markdown("### Status Distribution")
         if "Status" in df_filtered.columns:
             pie_data = df_filtered['Status'].value_counts().reset_index()
             pie_data.columns = ['Status', 'Count']
             fig_pie = px.pie(
-                pie_data, 
-                names='Status', 
+                pie_data,
+                names='Status',
                 values='Count',
                 color='Status',
                 color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
@@ -284,8 +278,8 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Reports Over Time (Bar Chart)
-        st.markdown("### Reports Over Time (Daily)")
+        # Reports Over Time (Bar chart by day)
+        st.markdown("### Reports Over Time")
         if "DateTime" in df_filtered.columns:
             time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
             fig_bar_time = px.bar(
@@ -293,8 +287,7 @@ def municipal_overview_page(df):
                 x='DateTime',
                 y='Count',
                 title=f"Daily Reports - {admin_muni}",
-                color='Count',
-                color_continuous_scale='teal',
+                color_discrete_sequence=[COLORS['magic_mint']]
             )
             st.plotly_chart(fig_bar_time, use_container_width=True)
 
