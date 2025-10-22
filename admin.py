@@ -109,14 +109,20 @@ def login_user(code):
 
 # ------------------ AUTHENTICATION ------------------
 def login_page():
-    st.markdown(f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
-                f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
+        f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>",
+        unsafe_allow_html=True
+    )
+
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
-   if st.button("Login"):
+
+    if st.button("Login"):
         if login_user(code):
             st.experimental_rerun()  # Immediately refresh page after login
         else:
             st.error("Invalid code")
+
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
 import streamlit as st
