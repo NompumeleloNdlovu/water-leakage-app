@@ -99,15 +99,14 @@ def login_page():
             st.error("Invalid code")
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
+import streamlit as st
+from datetime import datetime, timedelta
+import time
+
 def home_page(df):
     if df.empty:
         st.warning("No reports found yet.")
         return
-
-    # --- Filter to admin's municipality ---
-    admin_muni = st.session_state.admin_municipality
-    if "Municipality" in df.columns:
-        df = df[df['Municipality'] == admin_muni]
 
     # --- Time-based greeting ---
     hour = datetime.now().hour
@@ -154,11 +153,6 @@ def home_page(df):
             z-index: 2;
             text-align: center;
         }}
-        @keyframes pulse {{
-            0% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }}
-            70% {{ box-shadow: 0 0 0 10px rgba(255,0,0,0); }}
-            100% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0); }}
-        }}
         .pulse-box {{
             background-color: #ffcccc;
             color: #a80000;
@@ -167,7 +161,6 @@ def home_page(df):
             text-align: center;
             font-weight: bold;
             font-size: 18px;
-            animation: pulse 1.5s infinite;
         }}
         </style>
 
@@ -182,15 +175,6 @@ def home_page(df):
         unsafe_allow_html=True
     )
 
-    # --- Date range picker ---
-    min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
-    max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
-    start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
-
-    df_filtered = df
-    if "DateTime" in df.columns:
-        df_filtered = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
-
     # --- Metrics calculations ---
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
@@ -200,130 +184,37 @@ def home_page(df):
     reports_at_login = st.session_state.get("reports_at_login", total_reports)
     new_reports = max(total_reports - reports_at_login, 0)
 
-    # --- Live Counter Metrics ---
+    # --- Live Counters using Streamlit ---
     col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
-    col1.markdown(f"""
-    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="total_reports">0</div>
-    <script>
-    let i_total = 0;
-    let total = {total_reports};
-    let elem_total = document.getElementById('total_reports');
-    let timer_total = setInterval(() => {{
-        if(i_total <= total){{
-            elem_total.innerHTML = "Total Reports: " + i_total;
-            i_total++;
-        }} else {{
-            clearInterval(timer_total);
-        }}
-    }}, 50);
-    </script>
-    """, unsafe_allow_html=True)
+    placeholder_total = col1.empty()
+    for i in range(total_reports + 1):
+        placeholder_total.metric("Total Reports", i)
+        time.sleep(0.02)
 
     # Resolved Reports
-    col2.markdown(f"""
-    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="resolved_reports">0</div>
-    <script>
-    let i_resolved = 0;
-    let resolved = {resolved_reports};
-    let elem_resolved = document.getElementById('resolved_reports');
-    let timer_resolved = setInterval(() => {{
-        if(i_resolved <= resolved){{
-            elem_resolved.innerHTML = "Resolved Reports: " + i_resolved;
-            i_resolved++;
-        }} else {{
-            clearInterval(timer_resolved);
-        }}
-    }}, 50);
-    </script>
-    """, unsafe_allow_html=True)
+    placeholder_resolved = col2.empty()
+    for i in range(resolved_reports + 1):
+        placeholder_resolved.metric("Resolved Reports", i)
+        time.sleep(0.02)
 
-    # Pending Reports (with pulse if >0)
-    with col3:
-        if pending_reports > 0:
-            st.markdown(f"""
-            <div class='pulse-box' id='pending_reports'>0</div>
-            <script>
-            let i_pending = 0;
-            let pending = {pending_reports};
-            let elem_pending = document.getElementById('pending_reports');
-            let timer_pending = setInterval(() => {{
-                if(i_pending <= pending){{
-                    elem_pending.innerHTML = "⚠️ Pending Reports: " + i_pending;
-                    i_pending++;
-                }} else {{
-                    clearInterval(timer_pending);
-                }}
-            }}, 50);
-            </script>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div style='text-align:center;font-weight:bold;'>Pending Reports: {pending_reports}</div>", unsafe_allow_html=True)
-
-    # New Since Last Login
-    col4.markdown(f"""
-    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="new_reports">0</div>
-    <script>
-    let i_new = 0;
-    let newR = {new_reports};
-    let elem_new = document.getElementById('new_reports');
-    let timer_new = setInterval(() => {{
-        if(i_new <= newR){{
-            elem_new.innerHTML = "New Since Last Login: " + i_new;
-            i_new++;
-        }} else {{
-            clearInterval(timer_new);
-        }}
-    }}, 50);
-    </script>
-    """, unsafe_allow_html=True)
-
-    # --- Charts ---
-    if not df_filtered.empty:
-        # Leak Type Distribution
-        st.markdown("### Leak Type Distribution")
-        if "Leak Type" in df_filtered.columns:
-            bar_data = df_filtered['Leak Type'].value_counts().reset_index()
-            bar_data.columns = ['Leak Type', 'Count']
-            fig_bar = px.bar(
-                bar_data,
-                x='Leak Type',
-                y='Count',
-                color='Leak Type',
-                color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
-                title=f"Leak Reports by Type - {admin_muni}"
+    # Pending Reports with pulse if >0
+    placeholder_pending = col3.empty()
+    if pending_reports > 0:
+        for i in range(pending_reports + 1):
+            placeholder_pending.markdown(
+                f"<div class='pulse-box'>⚠️ Pending Reports: {i}</div>", unsafe_allow_html=True
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            time.sleep(0.02)
+    else:
+        placeholder_pending.metric("Pending Reports", 0)
 
-        # Status Distribution
-        st.markdown("### Status Distribution")
-        if "Status" in df_filtered.columns:
-            pie_data = df_filtered['Status'].value_counts().reset_index()
-            pie_data.columns = ['Status', 'Count']
-            fig_pie = px.pie(
-                pie_data,
-                names='Status',
-                values='Count',
-                color='Status',
-                color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-                title=f"Status Breakdown - {admin_muni}"
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        # Reports Over Time
-        st.markdown("### Reports Over Time")
-        if "DateTime" in df_filtered.columns:
-            time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
-            fig_line = px.line(
-                time_data,
-                x='DateTime',
-                y='Count',
-                title=f"Reports Over Time - {admin_muni}",
-                markers=True,
-                color_discrete_sequence=[COLORS['teal_blue']]
-            )
-            st.plotly_chart(fig_line, use_container_width=True)
+    # New Reports since last login
+    placeholder_new = col4.empty()
+    for i in range(new_reports + 1):
+        placeholder_new.metric("New Since Last Login", i)
+        time.sleep(0.02)
 
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
