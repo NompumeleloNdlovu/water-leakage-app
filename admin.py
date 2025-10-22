@@ -32,6 +32,7 @@ def logout():
     st.experimental_rerun()  # Immediately refresh page after logout
 
 
+
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
     if show_on_page and st.session_state.page not in show_on_page:
@@ -103,9 +104,9 @@ def login_user(code):
         st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
         st.session_state.page = "Home"
         st.session_state.last_login = datetime.now()
-        st.experimental_rerun()  # Immediately refresh page after login
     else:
         st.error("Invalid code")
+
 
 # ------------------ AUTHENTICATION ------------------
 def login_page():
@@ -117,8 +118,6 @@ def login_page():
     )
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
-
-    # Button triggers login_user with the entered code
     st.button("Login", on_click=login_user, args=(code,))
 
 
