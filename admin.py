@@ -117,11 +117,21 @@ def login_page():
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
 
+    # Only try login when the button is pressed
     if st.button("Login"):
-        if login_user(code):
-            st.experimental_rerun()  # Immediately refresh page after login
+        # Wrap the login logic
+        admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
+        if not admin_info.empty:
+            st.session_state.logged_in = True
+            st.session_state.admin_name = admin_info.iloc[0]['AdminName']
+            st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
+            st.session_state.page = "Home"
+            
+            # Use rerun to immediately refresh the app with logged-in state
+            st.experimental_rerun()
         else:
             st.error("Invalid code")
+
 
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
