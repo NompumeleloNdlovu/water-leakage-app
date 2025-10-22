@@ -394,7 +394,7 @@ def manage_reports_page(df, sheet):
     for idx, row in df_admin.iterrows():
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
-        with st.expander(f"Report #{row['Reference']} — {row.get('Location','N/A')}"):
+        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
             # Report container
             st.markdown(f'<div class="report-box" style="border-left: 8px solid {severity_color};">', unsafe_allow_html=True)
             
@@ -404,7 +404,7 @@ def manage_reports_page(df, sheet):
             # Display uploaded image if available
             image_path = row.get("ImageURL", "")
             if image_path and os.path.exists(image_path):
-                st.image(image_path, caption=f"Report {row['Reference']} Image", use_column_width=True)
+                st.image(image_path, caption=f"Report {row['ReportID']} Image", use_column_width=True)
             else:
                 st.info("No image uploaded for this report.")
 
@@ -417,7 +417,7 @@ def manage_reports_page(df, sheet):
             new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
-                    cell = sheet.find(str(row['Reference']))
+                    cell = sheet.find(str(row['ReportID']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
