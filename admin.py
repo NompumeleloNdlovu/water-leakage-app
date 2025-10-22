@@ -175,6 +175,9 @@ def home_page(df):
         unsafe_allow_html=True
     )
 
+    # --- Filter by admin municipality ---
+    df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
+
     # --- Metrics calculations ---
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
@@ -184,7 +187,7 @@ def home_page(df):
     reports_at_login = st.session_state.get("reports_at_login", total_reports)
     new_reports = max(total_reports - reports_at_login, 0)
 
-    # --- Live Counters using Streamlit ---
+    # --- Live Counters using Streamlit placeholders ---
     col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
@@ -215,7 +218,6 @@ def home_page(df):
     for i in range(new_reports + 1):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
-
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page():
