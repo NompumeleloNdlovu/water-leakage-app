@@ -352,49 +352,40 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
-def manage_reports_page():
-    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
-        st.warning("Please log in to view this page.")
-        return
+import streamlit as st
+import base64
 
-    # --- Page background image ---
-    page_bg_image = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
+# Helper to set background image
+def set_bg_image(image_file):
+    """Set a background image from local path in Streamlit"""
+    with open(image_file, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
     st.markdown(
         f"""
         <style>
         .manage-reports-container {{
-            background-image: url('{page_bg_image}');
+            background-image: url("data:image/jpg;base64,{b64}");
             background-size: cover;
             background-position: center;
             padding: 15px;
             border-radius: 15px;
         }}
-        .report-box {{
-            background-color: rgba(255,255,255,0.85);
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }}
-        .pulse {{
-            animation: pulse 1.5s infinite;
-            background-color: #ffcccc;
-            color: #a80000;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
-        }}
-        @keyframes pulse {{
-            0% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }}
-            70% {{ box-shadow: 0 0 0 10px rgba(255,0,0,0); }}
-            100% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0); }}
-        }}
         </style>
-        <div class="manage-reports-container">
         """,
         unsafe_allow_html=True
     )
 
+# ------------------ MANAGE REPORTS ------------------
+def manage_reports_page():
+    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
+        st.warning("Please log in to view this page.")
+        return
+
+    # Set page background
+    set_bg_image("images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg")
+
+    st.markdown('<div class="manage-reports-container">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -405,26 +396,28 @@ def manage_reports_page():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # Loop through each report
     for idx, row in df_admin.iterrows():
-        status = row.get("Status", "Pending")
-        severity_class = "pulse" if status == "Pending" else ""
+        severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            st.markdown(f"<div class='report-box'>", unsafe_allow_html=True)
+            # Display main report info
+            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:8px;'>", unsafe_allow_html=True)
+            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
 
-            # Report table excluding image URL
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
-
-            # Show uploaded image if present
+            # Display report image if available
             image_url = row.get("ImageURL")
             if image_url and isinstance(image_url, str) and image_url.strip():
                 st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
             # Status update
+            current_status = row.get("Status", "Pending")
             options = ["Pending", "Resolved"]
-            if status not in options:
-                status = "Pending"
-            new_status = st.selectbox("Update Status", options, index=options.index(status), key=f"status_{idx}")
+            if current_status not in options:
+                current_status = "Pending"
+            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
                     cell = sheet.find(str(row['ReportID']))
@@ -434,23 +427,15 @@ def manage_reports_page():
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-            # Highlight pending reports
-            if status == "Pending":
-                st.markdown(f"<div class='{severity_class}'>⚠️ Pending</div>", unsafe_allow_html=True)
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # Add decorative image halfway through
-        if idx == len(df_admin)//2:
-            st.markdown(
-                f"""
-                <div style='text-align:center;margin:20px 0;'>
-                    <img src='images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg' 
-                    style='width:70%;border-radius:15px;'/>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            # Decorative mid-page image after half of reports
+            if idx == len(df_admin)//2:
+                st.markdown(
+                    "<div style='text-align:center;margin:20px 0;'>"
+                    f"<img src='images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg' "
+                    "style='width:70%;border-radius:15px;' />"
+                    "</div>",
+                    unsafe_allow_html=True
+                )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
