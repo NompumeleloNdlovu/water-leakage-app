@@ -110,27 +110,28 @@ def login_user(code):
 # ------------------ AUTHENTICATION ------------------
 def login_page():
     st.markdown(
-        f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
+        f"<div style='background-color:{COLORS['teal_blue']};padding:40px;"
+        f"border-radius:10px;margin-top:50px;text-align:center;'>"
         f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>",
         unsafe_allow_html=True
     )
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
 
-    # Only try login when the button is pressed
-    if st.button("Login"):
-        # Wrap the login logic
+    # Use a callback function to handle login
+    def attempt_login():
         admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
         if not admin_info.empty:
             st.session_state.logged_in = True
             st.session_state.admin_name = admin_info.iloc[0]['AdminName']
             st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
             st.session_state.page = "Home"
-            
-            # Use rerun to immediately refresh the app with logged-in state
-            st.experimental_rerun()
+            st.experimental_rerun()  # safe to call here
         else:
             st.error("Invalid code")
+
+    # Only trigger login when the button is pressed
+    st.button("Login", on_click=attempt_login)
 
 
 
