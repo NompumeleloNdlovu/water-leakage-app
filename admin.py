@@ -326,37 +326,35 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ---------------------- Reports Over Time (Scatter + Trendline) ----------------------
+# ---------------------- Reports Over Time (Scatter) ----------------------
+if "DateTime" in df_filtered.columns:
+    # Ensure DateTime is proper datetime
+    df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
 
-# Ensure DateTime column is valid datetime
-df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
+    # Drop invalid dates
+    df_filtered = df_filtered.dropna(subset=['DateTime'])
 
-# Drop rows with missing DateTime
-df_filtered = df_filtered.dropna(subset=['DateTime'])
+    if not df_filtered.empty:
+        # Count reports per date
+        time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
+        time_data['Date'] = time_data['DateTime'].astype(str)  # Convert to string for x-axis
 
-# Group by date only and rename column for plotting
-time_data = (
-    df_filtered.groupby(df_filtered['DateTime'].dt.date)
-    .size()
-    .reset_index(name='Count')
-    .rename(columns={'DateTime': 'Date'})
-)
+        # Scatter plot
+        fig_scatter = px.scatter(
+            time_data,
+            x='Date',
+            y='Count',
+            title=f"Reports Over Time - {st.session_state.admin_municipality}",
+            color_discrete_sequence=[COLORS['teal_blue']],
+            labels={'Count': 'Number of Reports', 'Date': 'Date'}
+        )
 
-# Convert date to string for clean x-axis labels
-time_data['Date'] = time_data['Date'].astype(str)
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:
+        st.info("No reports with valid dates to display.")
+else:
+    st.info("DateTime column not found in the dataset.")
 
-# Create scatter + trendline plot
-fig_scatter = px.scatter(
-    time_data,
-    x='Date',
-    y='Count',
-    trendline="lowess",
-    title=f"Reports Over Time - {st.session_state.admin_municipality}",
-    color_discrete_sequence=[COLORS['teal_blue']],
-    labels={'Count': 'Number of Reports', 'Date': 'Date'}
-)
-
-st.plotly_chart(fig_scatter, use_container_width=True)
 
 
 
