@@ -507,7 +507,7 @@ def custom_sidebar():
             st.session_state.logged_in = False
             st.session_state.page = "Login"
             st.success("You have been logged out.")
-            # do NOT call st.experimental_rerun() here
+         
 
 
 
@@ -539,4 +539,5 @@ if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
     st.session_state._trigger_rerun = False
     ctx = stsr.get_script_run_ctx()
     if ctx and not ctx.in_script_run:  # only rerun if Streamlit is idle
-        st.experimental_rerun()
+        safe_rerun()
+
