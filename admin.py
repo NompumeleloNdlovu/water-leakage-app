@@ -435,7 +435,7 @@ def manage_reports_page():
 
 
 # ------------------ SIDEBAR ------------------
- def custom_sidebar():
+def custom_sidebar():
     set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
                          show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], sidebar=True)
 
