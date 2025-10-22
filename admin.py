@@ -531,13 +531,11 @@ else:
     elif st.session_state.page == "Manage Reports":
         manage_reports_page(df, sheet)
 
-# Handle deferred rerun (safe to call here)
-import streamlit.runtime.scriptrunner as stsr
-
-# Safe rerun trigger
+# Handle deferred rerun safely (modern Streamlit)
 if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
     st.session_state._trigger_rerun = False
-    ctx = stsr.get_script_run_ctx()
-    if ctx and not ctx.in_script_run:  # only rerun if Streamlit is idle
-        safe_rerun()
+    try:
+        st.rerun()  # replaces st.experimental_rerun()
+    except Exception:
+        pass
 
