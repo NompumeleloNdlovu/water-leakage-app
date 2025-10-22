@@ -29,7 +29,8 @@ if "page" not in st.session_state: st.session_state.page = "Home"
 def logout():
     st.session_state.logged_in = False
     st.session_state.page = "Login"
-    st.experimental_rerun()  # Immediately refresh page after logout
+    st.success("You have been logged out.")
+    # Do NOT call st.experimental_rerun() here
 
 
 
@@ -97,15 +98,20 @@ def login_user(code):
     """
     Authenticate admin and set session state.
     """
-    admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
+    code = str(code).strip()  # Ensure string and remove spaces
+    admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()  # Clean the dataframe
+
+    admin_info = admins_df[admins_df['AdminCode'] == code]
     if not admin_info.empty:
         st.session_state.logged_in = True
         st.session_state.admin_name = admin_info.iloc[0]['AdminName']
         st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
         st.session_state.page = "Home"
         st.session_state.last_login = datetime.now()
+        return True
     else:
-        st.error("Invalid code")
+        return False
+
 
 
 # ------------------ AUTHENTICATION ------------------
@@ -118,8 +124,14 @@ def login_page():
     )
 
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
-    st.button("Login", on_click=login_user, args=(code,))
 
+    def attempt_login():
+        if login_user(code):
+            st.experimental_rerun()  # safe to call here
+        else:
+            st.error("Invalid code")
+
+    st.button("Login", on_click=attempt_login)
 
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
@@ -472,7 +484,10 @@ def custom_sidebar():
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
     if st.session_state.logged_in:
-        st.sidebar.button("Logout", on_click=logout)
+      if st.sidebar.button("Logout"):
+        logout()
+        st.experimental_rerun()  # safe to rerun after logout
+
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
