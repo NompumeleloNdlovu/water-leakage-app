@@ -113,10 +113,10 @@ def login_page():
                 f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>", unsafe_allow_html=True)
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
    if st.button("Login"):
-    if login_user(code):
-        st.experimental_rerun()  # Immediately refresh page after login
-    else:
-        st.error("Invalid code")
+        if login_user(code):
+            st.experimental_rerun()  # Immediately refresh page after login
+        else:
+            st.error("Invalid code")
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
 import streamlit as st
