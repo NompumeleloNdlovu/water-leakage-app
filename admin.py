@@ -285,8 +285,11 @@ def municipal_overview_page(df):
     )
 
     # Filter by logged-in admin's municipality
-    admin_muni = st.session_state.admin_municipality
-    df_filtered = df[df['Municipality'] == admin_muni] if "Municipality" in df.columns else df
+    admin_muni = st.session_state.get('admin_municipality', None)
+    if admin_muni and "Municipality" in df.columns:
+        df_filtered = df[df['Municipality'] == admin_muni].copy()
+    else:
+        df_filtered = df.copy()
 
     # Metrics
     col1, col2, col3 = st.columns(3)
@@ -297,8 +300,8 @@ def municipal_overview_page(df):
     # Charts
     if not df_filtered.empty:
         # Leak Type Distribution
-        st.markdown("### Leak Type Distribution")
         if "Leak Type" in df_filtered.columns:
+            st.markdown("### Leak Type Distribution")
             bar_data = df_filtered['Leak Type'].value_counts().reset_index()
             bar_data.columns = ['Leak Type', 'Count']
             fig_bar = px.bar(
@@ -312,8 +315,8 @@ def municipal_overview_page(df):
             st.plotly_chart(fig_bar, use_container_width=True)
 
         # Status Distribution
-        st.markdown("### Status Distribution")
         if "Status" in df_filtered.columns:
+            st.markdown("### Status Distribution")
             pie_data = df_filtered['Status'].value_counts().reset_index()
             pie_data.columns = ['Status', 'Count']
             fig_pie = px.pie(
@@ -326,39 +329,30 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-# ---------------------- Reports Over Time (Scatter) ----------------------
-if "DateTime" in df.columns and "Municipality" in df.columns:
-    # Filter by logged-in admin's municipality
-    admin_muni = st.session_state.get('admin_municipality', None)
-    if admin_muni:
-        df_plot = df[df['Municipality'] == admin_muni].copy()
-    else:
-        df_plot = df.copy()
+        # Reports Over Time (Scatter Plot)
+        if "DateTime" in df_filtered.columns:
+            df_plot = df_filtered.copy()
+            df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
+            df_plot = df_plot.dropna(subset=['DateTime'])
 
-    # Ensure DateTime is proper datetime
-    df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
-    df_plot = df_plot.dropna(subset=['DateTime'])  # Remove invalid dates
+            if not df_plot.empty:
+                # Count reports per date
+                time_data = df_plot.groupby(df_plot['DateTime'].dt.date).size().reset_index(name='Count')
+                time_data['Date'] = time_data['DateTime'].astype(str)
 
-    if not df_plot.empty:
-        # Count reports per date
-        time_data = df_plot.groupby(df_plot['DateTime'].dt.date).size().reset_index(name='Count')
-        time_data['Date'] = time_data['DateTime'].astype(str)  # Convert to string for x-axis
-
-        # Scatter plot
-        fig_scatter = px.scatter(
-            time_data,
-            x='Date',
-            y='Count',
-            title=f"Reports Over Time - {admin_muni}",
-            color_discrete_sequence=[COLORS['teal_blue']],
-            labels={'Count': 'Number of Reports', 'Date': 'Date'}
-        )
-
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    else:
-        st.info("No reports with valid dates to display.")
-else:
-    st.info("DateTime or Municipality column not found in the dataset.")
+                # Scatter plot
+                st.markdown("### Reports Over Time")
+                fig_scatter = px.scatter(
+                    time_data,
+                    x='Date',
+                    y='Count',
+                    title=f"Reports Over Time - {admin_muni}",
+                    color_discrete_sequence=[COLORS['teal_blue']],
+                    labels={'Count': 'Number of Reports', 'Date': 'Date'}
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
+            else:
+                st.info("No reports with valid dates to display.")
 
 
 
