@@ -271,7 +271,6 @@ def home_page(df):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
 
-# ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page(df):
     if df.empty:
         st.warning("No reports found yet.")
@@ -285,11 +284,8 @@ def municipal_overview_page(df):
     )
 
     # Filter by logged-in admin's municipality
-    admin_muni = st.session_state.get('admin_municipality', None)
-    if admin_muni and "Municipality" in df.columns:
-        df_filtered = df[df['Municipality'] == admin_muni].copy()
-    else:
-        df_filtered = df.copy()
+    admin_muni = st.session_state.admin_municipality
+    df_filtered = df[df['Municipality'] == admin_muni] if "Municipality" in df.columns else df
 
     # Metrics
     col1, col2, col3 = st.columns(3)
@@ -300,8 +296,8 @@ def municipal_overview_page(df):
     # Charts
     if not df_filtered.empty:
         # Leak Type Distribution
+        st.markdown("### Leak Type Distribution")
         if "Leak Type" in df_filtered.columns:
-            st.markdown("### Leak Type Distribution")
             bar_data = df_filtered['Leak Type'].value_counts().reset_index()
             bar_data.columns = ['Leak Type', 'Count']
             fig_bar = px.bar(
@@ -315,8 +311,8 @@ def municipal_overview_page(df):
             st.plotly_chart(fig_bar, use_container_width=True)
 
         # Status Distribution
+        st.markdown("### Status Distribution")
         if "Status" in df_filtered.columns:
-            st.markdown("### Status Distribution")
             pie_data = df_filtered['Status'].value_counts().reset_index()
             pie_data.columns = ['Status', 'Count']
             fig_pie = px.pie(
@@ -329,37 +325,23 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-       # ---------------------- Reports Over Time (Scatter) ----------------------
-if "DateTime" in df.columns and "Municipality" in df.columns:
-    # Filter by logged-in admin's municipality
-    admin_muni = st.session_state.get('admin_municipality', None)
-    if admin_muni:
-        df_plot = df[df['Municipality'] == admin_muni].copy()
-    else:
-        df_plot = df.copy()
+        # Reports Over Time (Scatter)
+        st.markdown("### Reports Over Time")
+        if "DateTime" in df.columns:
+            df_plot = df_filtered.copy()
+            df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
+            df_plot = df_plot.dropna(subset=['DateTime'])
 
-    # Ensure DateTime is proper datetime
-    df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
-    df_plot = df_plot.dropna(subset=['DateTime'])  # Remove invalid dates
-
-    if not df_plot.empty:
-        # Scatter plot: one dot per report
-        fig_scatter = px.scatter(
-            df_plot,
-            x='DateTime',
-            y=[1]*len(df_plot),  # dummy y-axis
-            title=f"Reports Over Time - {admin_muni}",
-            color_discrete_sequence=[COLORS['teal_blue']],
-            labels={'DateTime': 'Submission Time', 'y': 'Reports'}
-        )
-
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    else:
-        st.info("No reports with valid dates to display.")
-else:
-    st.info("DateTime or Municipality column not found in the dataset.")
-
-
+            if not df_plot.empty:
+                fig_scatter = px.scatter(
+                    df_plot,
+                    x='DateTime',
+                    y=[1]*len(df_plot),
+                    title=f"Reports Over Time - {admin_muni}",
+                    color_discrete_sequence=[COLORS['teal_blue']],
+                    labels={'DateTime': 'Submission Time', 'y': 'Reports'}
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
 
 
 
