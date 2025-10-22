@@ -29,8 +29,10 @@ if "page" not in st.session_state: st.session_state.page = "Home"
 def logout():
     st.session_state.logged_in = False
     st.session_state.page = "Login"
+    st.session_state.admin_name = ""
+    st.session_state.admin_municipality = ""
     st.success("You have been logged out.")
-    # Do NOT call st.experimental_rerun() here
+
 
 
 
@@ -483,9 +485,11 @@ def custom_sidebar():
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
     if st.session_state.logged_in:
-      if st.sidebar.button("Logout"):
+       if st.sidebar.button("Logout"):
         logout()
-        st.experimental_rerun()  # safe to rerun after logout
+        # Safe place to rerun: directly after logout
+        st.experimental_rerun()
+
 
 
 # ------------------ PAGE RENDER ------------------
