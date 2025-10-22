@@ -327,16 +327,21 @@ def municipal_overview_page(df):
             st.plotly_chart(fig_pie, use_container_width=True)
 
 # ---------------------- Reports Over Time (Scatter) ----------------------
-if "DateTime" in df_filtered.columns:
+if "DateTime" in df.columns and "Municipality" in df.columns:
+    # Filter by logged-in admin's municipality
+    admin_muni = st.session_state.get('admin_municipality', None)
+    if admin_muni:
+        df_plot = df[df['Municipality'] == admin_muni].copy()
+    else:
+        df_plot = df.copy()
+
     # Ensure DateTime is proper datetime
-    df_filtered['DateTime'] = pd.to_datetime(df_filtered['DateTime'], errors='coerce')
+    df_plot['DateTime'] = pd.to_datetime(df_plot['DateTime'], errors='coerce')
+    df_plot = df_plot.dropna(subset=['DateTime'])  # Remove invalid dates
 
-    # Drop invalid dates
-    df_filtered = df_filtered.dropna(subset=['DateTime'])
-
-    if not df_filtered.empty:
+    if not df_plot.empty:
         # Count reports per date
-        time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
+        time_data = df_plot.groupby(df_plot['DateTime'].dt.date).size().reset_index(name='Count')
         time_data['Date'] = time_data['DateTime'].astype(str)  # Convert to string for x-axis
 
         # Scatter plot
@@ -344,7 +349,7 @@ if "DateTime" in df_filtered.columns:
             time_data,
             x='Date',
             y='Count',
-            title=f"Reports Over Time - {st.session_state.admin_municipality}",
+            title=f"Reports Over Time - {admin_muni}",
             color_discrete_sequence=[COLORS['teal_blue']],
             labels={'Count': 'Number of Reports', 'Date': 'Date'}
         )
@@ -353,10 +358,7 @@ if "DateTime" in df_filtered.columns:
     else:
         st.info("No reports with valid dates to display.")
 else:
-    st.info("DateTime column not found in the dataset.")
-
-
-
+    st.info("DateTime or Municipality column not found in the dataset.")
 
 
 
