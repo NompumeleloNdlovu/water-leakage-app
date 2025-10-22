@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import plotly.express as px
 from google.oauth2.service_account import Credentials
+import plotly.express as px
+import base64
 from datetime import datetime, timedelta
 import time
 
@@ -20,244 +21,282 @@ COLORS = {
 
 st.set_page_config(page_title="Drop Watch SA", layout="wide", initial_sidebar_state="expanded")
 
-# ------------------ GOOGLE AUTH ------------------
+# ------------------ SESSION ------------------
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "page" not in st.session_state: st.session_state.page = "Home"
+
+# ------------------ BACKGROUND IMAGE ------------------
+def set_background_local(image_path, show_on_page=None, sidebar=False):
+    if show_on_page and st.session_state.page not in show_on_page:
+        return
+    with open(image_path, "rb") as f:
+        data = f.read()
+    encoded = base64.b64encode(data).decode()
+    if sidebar:
+        st.markdown(f"""
+            <style>
+            [data-testid="stSidebar"] > div:first-child {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+
+# ------------------ GOOGLE SHEETS ------------------
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=scopes)
 client = gspread.authorize(creds)
 
-# ------------------ DATA LOADING ------------------
-@st.cache_data(ttl=60)
-def load_reports():
-    try:
-        sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
-        df = pd.DataFrame(sheet.get_all_records())
-        df.columns = df.columns.str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Failed to load Google Sheet: {e}")
-        return pd.DataFrame()
+# Load main reports
+try:
+    sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
+    records = sheet.get_all_records()
+    df = pd.DataFrame(records)
+    df.columns = df.columns.str.strip()
+    if "DateTime" in df.columns: df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
+except Exception as e:
+    st.error(f"Failed to load Google Sheet: {e}")
+    st.stop()
 
-@st.cache_data(ttl=60)
-def load_admins():
-    try:
-        sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
-        admins_df = pd.DataFrame(sheet.get_all_records())
-        admins_df.columns = admins_df.columns.str.strip()
-        admins_df = admins_df.applymap(lambda x: str(x).strip() if isinstance(x, str) else x)
-        return admins_df
-    except Exception as e:
-        st.error(f"Failed to load Admin Sheet: {e}")
-        return pd.DataFrame()
+# Load admin info
+try:
+    admin_sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet2")
+    admins_df = pd.DataFrame(admin_sheet.get_all_records())
+    admins_df.columns = admins_df.columns.str.strip()
+    admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()
+except Exception as e:
+    st.error(f"Failed to load Admin Sheet: {e}")
+    st.stop()
 
-# ------------------ LOGIN ------------------
+# ------------------ AUTHENTICATION ------------------
 def login_page():
-    st.title("🔐 Drop Watch SA - Admin Login")
-    st.markdown("Enter your admin code to access your municipality dashboard.")
-    code = st.text_input("Admin Code", type="password")
-
-    admins_df = load_admins()
-
+    st.markdown(f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
+                f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>", unsafe_allow_html=True)
+    code = st.text_input("", placeholder="Enter Admin Code", type="password")
     if st.button("Login"):
-        if not code:
-            st.warning("Please enter your code.")
-            return
-
-        if not admins_df.empty and "AdminCode" in admins_df.columns:
-            admin_info = admins_df[admins_df["AdminCode"] == code]
-            if not admin_info.empty:
-                st.session_state.logged_in = True
-                st.session_state.admin_name = admin_info["AdminName"].iloc[0]
-                st.session_state.admin_municipality = admin_info["Municipality"].iloc[0]
-                st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.rerun()
-            else:
-                st.error("Invalid code. Please try again.")
+        admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
+        if not admin_info.empty:
+            st.session_state.logged_in = True
+            st.session_state.admin_name = admin_info.iloc[0]['AdminName']
+            st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
+            st.session_state.page = "Home"
         else:
-            st.error("Admin sheet not loaded or missing AdminCode column.")
+            st.error("Invalid code")
 
-# ------------------ SIDEBAR ------------------
-def custom_sidebar():
-    with st.sidebar:
-        st.image("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg", use_container_width=True)
-        st.markdown(
-            f"""
-            <div style="background-color:{COLORS['teal_blue']};padding:15px;border-radius:10px;text-align:center;">
-                <h2 style="color:white;">Drop Watch SA</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        page = st.radio("📍 Navigate", ["Home", "Dashboard", "Municipal Overview", "Manage Reports"])
-
-        if st.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.success("Logged out successfully.")
-            st.rerun()
-
-        return page
-
-# ------------------ HOME PAGE ------------------
+# ------------------ HOME PAGE with WELCOME BANNER ------------------
 def home_page():
-    current_hour = datetime.now().hour
-    if current_hour < 12:
-        greeting = "Good morning"
-    elif current_hour < 18:
-        greeting = "Good afternoon"
-    else:
-        greeting = "Good evening"
-
-    st.markdown(
-        f"""
-        <style>
-        .banner {{
-            position: relative;
+    # Welcome banner with image background
+    st.markdown(f"""
+        <div style="
             background-image: url('images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg');
             background-size: cover;
             background-position: center;
-            border-radius: 15px;
-            height: 330px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-shadow: 2px 2px 6px #000;
-        }}
-        .banner::before {{
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            border-radius: 15px;
-        }}
-        .banner-content {{
-            position: relative;
-            z-index: 1;
+            padding: 50px;
+            border-radius: 10px;
             text-align: center;
-        }}
-        </style>
-
-        <div class="banner">
-            <div class="banner-content">
-                <h1>{greeting}, {st.session_state.admin_name}</h1>
-                <p>Welcome to the {st.session_state.admin_municipality} Admin Portal</p>
-            </div>
+            color: white;
+        ">
+            <h2>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        <br>
+    """, unsafe_allow_html=True)
 
-    st.markdown("### 👋 Overview")
-    st.info("Here’s a snapshot of your municipality’s recent reports and activity.")
+    # Live counters below the banner
+    last_month = datetime.today() - timedelta(days=30)
+    df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
+    if "DateTime" in df_admin.columns:
+        df_admin = df_admin[df_admin['DateTime'] >= last_month]
 
-    reports_df = load_reports()
-    if reports_df.empty:
-        st.warning("No reports found yet.")
-        return
-
-    muni_df = reports_df[reports_df["Municipality"] == st.session_state.admin_municipality]
-
-    total_reports = len(muni_df)
-    resolved = (muni_df["Status"] == "Resolved").sum() if "Status" in muni_df.columns else 0
-    pending = (muni_df["Status"] == "Pending").sum() if "Status" in muni_df.columns else 0
+    total_reports = len(df_admin)
+    resolved = (df_admin["Status"] == "Resolved").sum() if "Status" in df_admin.columns else 0
+    pending = (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Reports", total_reports)
-    col2.metric("Resolved", resolved)
-    col3.metric("Pending", pending)
+    total_container = col1.empty()
+    resolved_container = col2.empty()
+    pending_container = col3.empty()
 
-    st.markdown("### 📈 Report Trends (Last 30 Days)")
-    if "Date" in muni_df.columns:
-        muni_df["Date"] = pd.to_datetime(muni_df["Date"], errors="coerce")
-        recent = muni_df[muni_df["Date"] >= (datetime.now() - timedelta(days=30))]
-        if not recent.empty:
-            trend = recent.groupby(recent["Date"].dt.date).size().reset_index(name="Reports")
-            fig = px.area(trend, x="Date", y="Reports", title=f"Recent Reports - {st.session_state.admin_municipality}", markers=True)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No reports in the last 30 days.")
+    max_count = max(total_reports, resolved, pending)
+    for i in range(max_count + 1):
+        if i <= total_reports: total_container.metric("Reports in Last 30 Days", i)
+        if i <= resolved: resolved_container.metric("Resolved", i)
+        if i <= pending: pending_container.metric("Pending", i)
+        time.sleep(0.05)
+
+# ------------------ MUNICIPAL OVERVIEW ------------------
+def municipal_overview_page():
+    st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+                f"<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>", unsafe_allow_html=True)
+
+    min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
+    max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
+    start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
+
+    df_filtered_range = df
+    if "DateTime" in df.columns:
+        df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
+
+    if "Municipality" in df_filtered_range.columns:
+        municipalities = df_filtered_range['Municipality'].dropna().unique()
+        selected_municipality = st.selectbox("Select Municipality for Detailed Metrics", municipalities)
+        df_filtered = df_filtered_range[df_filtered_range['Municipality'] == selected_municipality]
     else:
-        st.info("No date column available in data.")
+        df_filtered = df_filtered_range
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df_filtered))
+    col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
+    col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
+
+    # Municipal Overview Charts
+    if not df_filtered.empty:
+        st.markdown("### Leak Type Distribution")
+        if "Leak Type" in df_filtered.columns:
+            bar_data = df_filtered['Leak Type'].value_counts().reset_index()
+            bar_data.columns = ['Leak Type', 'Count']
+            fig_bar = px.bar(bar_data, x='Leak Type', y='Count',
+                             color='Leak Type',
+                             color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+                             title=f"Leak Reports by Type - {selected_municipality}")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.markdown("### Status Distribution")
+        if "Status" in df_filtered.columns:
+            pie_data = df_filtered['Status'].value_counts().reset_index()
+            pie_data.columns = ['Status', 'Count']
+            fig_pie = px.pie(pie_data, names='Status', values='Count',
+                             color='Status',
+                             color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+                             title=f"Status Breakdown - {selected_municipality}")
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        st.markdown("### Reports Over Time")
+        if "DateTime" in df_filtered.columns:
+            time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
+            fig_line = px.line(time_data, x='DateTime', y='Count',
+                               title=f"Reports Over Time - {selected_municipality}",
+                               markers=True,
+                               color_discrete_sequence=[COLORS['teal_blue']])
+            st.plotly_chart(fig_line, use_container_width=True)
 
 # ------------------ DASHBOARD ------------------
 def dashboard_page():
-    df = load_reports()
-    if df.empty:
-        st.warning("No data found.")
-        return
+    st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+                f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard (All Municipalities)</h1></div>", unsafe_allow_html=True)
 
-    st.title("📊 Overall Dashboard Metrics")
-    st.metric("Total Reports", len(df))
-    st.metric("Resolved", (df["Status"] == "Resolved").sum())
-    st.metric("Pending", (df["Status"] == "Pending").sum())
+    st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df))
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
+    col3.metric("Pending", (df["Status"] == "Pending").sum())
 
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
         bar_data.columns = ['Leak Type', 'Count']
-        fig_bar = px.bar(bar_data, x='Leak Type', y='Count', color='Leak Type', title="Leak Reports by Type")
+        fig_bar = px.bar(bar_data, x='Leak Type', y='Count',
+                         color='Leak Type',
+                         color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+                         title="Leak Reports by Type")
         st.plotly_chart(fig_bar, use_container_width=True)
 
     if "Status" in df.columns:
         pie_data = df['Status'].value_counts().reset_index()
         pie_data.columns = ['Status', 'Count']
-        fig_pie = px.pie(pie_data, names='Status', values='Count', title="Reports by Status")
+        fig_pie = px.pie(pie_data, names='Status', values='Count',
+                         color='Status',
+                         color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+                         title="Status Breakdown")
         st.plotly_chart(fig_pie, use_container_width=True)
 
-# ------------------ MUNICIPAL OVERVIEW ------------------
-def municipal_overview_page():
-    st.title("🏙 Municipal Overview")
-    df = load_reports()
-    if df.empty:
-        st.warning("No data found.")
-        return
+    if "DateTime" in df.columns:
+        time_data = df.groupby(df['DateTime'].dt.date).size().reset_index(name='Count')
+        fig_time = px.line(time_data, x='DateTime', y='Count', title="Reports Over Time",
+                           markers=True, color_discrete_sequence=[COLORS['teal_blue']])
+        st.plotly_chart(fig_time, use_container_width=True)
 
-    muni_counts = df["Municipality"].value_counts().reset_index()
-    muni_counts.columns = ["Municipality", "Reports"]
-    fig = px.bar(muni_counts, x="Municipality", y="Reports", color="Municipality", title="Reports per Municipality")
-    st.plotly_chart(fig, use_container_width=True)
+    if "Municipality" in df.columns:
+        top_muni = df['Municipality'].value_counts().nlargest(3).reset_index()
+        top_muni.columns = ['Municipality', 'Reports']
+        st.markdown("### 🏆 Top 3 Municipalities by Number of Reports")
+        cols = st.columns(3)
+        for i, row in top_muni.iterrows():
+            cols[i].metric(row['Municipality'], row['Reports'])
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
-    st.title("🛠 Manage Reports")
-    df = load_reports()
-    if df.empty:
-        st.warning("No data found.")
+    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
+        st.warning("Please log in to view this page.")
         return
 
-    admin_muni = st.session_state.admin_municipality
-    muni_df = df[df["Municipality"] == admin_muni]
+    st.markdown(f"<div style='background-color: rgba(176,224,230,0.8); padding:10px; border-radius:10px;margin-top:10px;'>", unsafe_allow_html=True)
+    st.markdown("## Manage Reports")
 
-    for i, row in muni_df.iterrows():
-        with st.expander(f"Report #{row['ReportID']} — {row['Location']}"):
+    admin_muni = st.session_state.admin_municipality
+    df_admin = df[df['Municipality'] == admin_muni]
+
+    if df_admin.empty:
+        st.info("No reports for your municipality.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    for i, row in df_admin.iterrows():
+        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
             st.write(row)
             current_status = row.get("Status", "Pending")
-            new_status = st.selectbox(
-                "Update Status", ["Pending", "Resolved"],
-                index=["Pending", "Resolved"].index(current_status) if current_status in ["Pending", "Resolved"] else 0,
-                key=f"status_{i}"
-            )
+            options = ["Pending", "Resolved"]
+            if current_status not in options: current_status = "Pending"
+            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{i}")
             if st.button("Update", key=f"update_{i}"):
                 try:
-                    sheet = client.open_by_key(SHEET_KEY).worksheet("Sheet1")
-                    cell = sheet.find(str(row["ReportID"]))
+                    cell = sheet.find(str(row['ReportID']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
-                    st.success("Status updated!")
-                    st.cache_data.clear()
+                    st.success(f"Status updated to {new_status}")
+                    df.at[i, "Status"] = new_status
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------------ MAIN APP ------------------
-if "logged_in" not in st.session_state:
+# ------------------ SIDEBAR ------------------
+def custom_sidebar():
+    set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
+                         show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], sidebar=True)
+
+    st.sidebar.markdown(f"<div style='background-color: rgba(255,255,255,0.8); padding:15px;border-radius:10px;text-align:center;'>"
+                        f"<h3 style='color:black;'>Drop Watch SA</h3></div>", unsafe_allow_html=True)
+
+    if st.sidebar.button("Home"): st.session_state.page = "Home"
+    if st.sidebar.button("Municipal Overview"): st.session_state.page = "Municipal Overview"
+    if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
+    if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.page = "Login"
+
+# ------------------ PAGE RENDER ------------------
+if not st.session_state.logged_in:
+    st.session_state.page = "Login"
+    set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg", show_on_page=["Login"])
     login_page()
 else:
-    page = custom_sidebar()
-    if page == "Home":
-        home_page()
-    elif page == "Dashboard":
-        dashboard_page()
-    elif page == "Municipal Overview":
-        municipal_overview_page()
-    elif page == "Manage Reports":
-        manage_reports_page()
-
+    custom_sidebar()
+    if st.session_state.page == "Home": home_page()
+    elif st.session_state.page == "Municipal Overview": municipal_overview_page()
+    elif st.session_state.page == "Dashboard": dashboard_page()
+    elif st.session_state.page == "Manage Reports": manage_reports_page()
