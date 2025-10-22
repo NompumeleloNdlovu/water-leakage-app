@@ -357,7 +357,7 @@ def manage_reports_page():
         st.warning("Please log in to view this page.")
         return
 
-    # Full-width, fixed background image
+    # Full-width fixed background image
     bg_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
     with open(bg_image_path, "rb") as f:
         data = f.read()
@@ -387,6 +387,11 @@ def manage_reports_page():
             margin-top: 10px;
             margin-bottom: 10px;
         }}
+        .report-url {{
+            font-size: 14px;
+            color: #003366;
+            margin-top: 5px;
+        }}
         </style>
         """,
         unsafe_allow_html=True
@@ -413,16 +418,17 @@ def manage_reports_page():
             # Display report info
             st.write(row.drop(labels=['ImageURL'], errors='ignore'))
 
-            # Display uploaded image with card styling
-            image_data = row.get("ImageURL")
-            if image_data and isinstance(image_data, str) and image_data.strip():
+            # Display uploaded image or its URL
+            image_url = row.get("ImageURL")
+            if image_url and isinstance(image_url, str) and image_url.strip():
+                # Try to render image
                 try:
-                    st.markdown(
-                        f"<img src='{image_data}' class='report-image' />",
-                        unsafe_allow_html=True
-                    )
-                except Exception as e:
-                    st.warning(f"Could not display image for Report {row['ReportID']}: {e}")
+                    st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+                except:
+                    # If image fails, just show the URL
+                    st.markdown(f"<div class='report-url'>Image URL: <a href='{image_url}' target='_blank'>{image_url}</a></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='report-url'>No image uploaded</div>", unsafe_allow_html=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -442,7 +448,6 @@ def manage_reports_page():
                     st.error(f"Failed to update status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 
 # ------------------ SIDEBAR ------------------
