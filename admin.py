@@ -278,18 +278,19 @@ def municipal_overview_page(df):
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Reports Over Time (Bar chart by day)
+       # Reports Over Time (Area Chart)
         st.markdown("### Reports Over Time")
         if "DateTime" in df_filtered.columns:
             time_data = df_filtered.groupby(df_filtered['DateTime'].dt.date).size().reset_index(name='Count')
-            fig_bar_time = px.bar(
+            fig_area = px.area(
                 time_data,
                 x='DateTime',
                 y='Count',
-                title=f"Daily Reports - {admin_muni}",
+                title=f"Reports Over Time - {admin_muni}",
                 color_discrete_sequence=[COLORS['magic_mint']]
             )
-            st.plotly_chart(fig_bar_time, use_container_width=True)
+            st.plotly_chart(fig_area, use_container_width=True)
+
 
 
 
