@@ -104,6 +104,11 @@ def home_page(df):
         st.warning("No reports found yet.")
         return
 
+    # --- Filter to admin's municipality ---
+    admin_muni = st.session_state.admin_municipality
+    if "Municipality" in df.columns:
+        df = df[df['Municipality'] == admin_muni]
+
     # --- Time-based greeting ---
     hour = datetime.now().hour
     if hour < 12:
@@ -182,9 +187,9 @@ def home_page(df):
     max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
     start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
 
-    df_filtered_range = df
+    df_filtered = df
     if "DateTime" in df.columns:
-        df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
+        df_filtered = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
 
     # --- Metrics calculations ---
     total_reports = len(df_filtered)
@@ -287,7 +292,7 @@ def home_page(df):
                 y='Count',
                 color='Leak Type',
                 color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
-                title=f"Leak Reports by Type - {selected_municipality}"
+                title=f"Leak Reports by Type - {admin_muni}"
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -302,7 +307,7 @@ def home_page(df):
                 values='Count',
                 color='Status',
                 color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
-                title=f"Status Breakdown - {selected_municipality}"
+                title=f"Status Breakdown - {admin_muni}"
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -314,7 +319,7 @@ def home_page(df):
                 time_data,
                 x='DateTime',
                 y='Count',
-                title=f"Reports Over Time - {selected_municipality}",
+                title=f"Reports Over Time - {admin_muni}",
                 markers=True,
                 color_discrete_sequence=[COLORS['teal_blue']]
             )
