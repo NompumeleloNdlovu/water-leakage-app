@@ -352,31 +352,47 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
-import streamlit as st
-import base64
-
-# ------------------ MANAGE REPORTS ------------------
 def manage_reports_page():
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Page-level full-width background image with semi-transparent overlay
+    # Full-width, fixed background image
+    bg_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
+    with open(bg_image_path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
     st.markdown(
         f"""
-        <div style="
-            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
+        <style>
+        .manage-reports-container {{
+            background-image: url("data:image/jpg;base64,{b64}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
             padding: 20px;
             border-radius: 15px;
             background-color: rgba(255,255,255,0.85);
-        ">
+        }}
+        .report-card {{
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+        }}
+        .report-image {{
+            border: 3px solid #555;
+            border-radius: 15px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }}
+        </style>
         """,
         unsafe_allow_html=True
     )
 
+    st.markdown('<div class="manage-reports-container">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -387,23 +403,24 @@ def manage_reports_page():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Loop through each report
     for idx, row in df_admin.iterrows():
+        # Severity color: red for Pending, green for Resolved
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            # Display main report info
-            st.markdown(
-                f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>",
-                unsafe_allow_html=True
-            )
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
+            st.markdown(f"<div class='report-card' style='background-color:{severity_color};'>", unsafe_allow_html=True)
 
-            # Display uploaded image if available
+            # Display report info
+            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
+
+            # Display uploaded image with card styling
             image_data = row.get("ImageURL")
             if image_data and isinstance(image_data, str) and image_data.strip():
                 try:
-                    st.image(image_data, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+                    st.markdown(
+                        f"<img src='{image_data}' class='report-image' />",
+                        unsafe_allow_html=True
+                    )
                 except Exception as e:
                     st.warning(f"Could not display image for Report {row['ReportID']}: {e}")
 
@@ -425,6 +442,7 @@ def manage_reports_page():
                     st.error(f"Failed to update status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ------------------ SIDEBAR ------------------
