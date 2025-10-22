@@ -515,24 +515,17 @@ def custom_sidebar():
 
 
 
-
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
-    set_background_local(
-        "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
-        show_on_page=["Login"]
-    )
+    st.session_state.page = "Login"
+    set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg", show_on_page=["Login"])
     login_page()
 else:
     custom_sidebar()
-    if st.session_state.page == "Home":
-        home_page(df)
-    elif st.session_state.page == "Municipal Overview":
-        municipal_overview_page(df)
-    elif st.session_state.page == "Dashboard":
-        dashboard_page()
-    elif st.session_state.page == "Manage Reports":
-        manage_reports_page(df, sheet)
+    if st.session_state.page == "Home": home_page(df)
+    elif st.session_state.page == "Municipal Overview": municipal_overview_page(df)
+    elif st.session_state.page == "Dashboard": dashboard_page()
+    elif st.session_state.page == "Manage Reports": manage_reports_page(df, sheet)
 
 # Handle deferred rerun safely (modern Streamlit)
 if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
