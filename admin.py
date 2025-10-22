@@ -112,15 +112,11 @@ def login_page():
     st.markdown(f"<div style='background-color:{COLORS['teal_blue']};padding:40px;border-radius:10px;margin-top:50px;text-align:center;'>"
                 f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>", unsafe_allow_html=True)
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
-    if st.button("Login"):
-        admin_info = admins_df[admins_df['AdminCode'] == code.strip()]
-        if not admin_info.empty:
-            st.session_state.logged_in = True
-            st.session_state.admin_name = admin_info.iloc[0]['AdminName']
-            st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
-            st.session_state.page = "Home"
-        else:
-            st.error("Invalid code")
+   if st.button("Login"):
+    if login_user(code):
+        st.experimental_rerun()  # Immediately refresh page after login
+    else:
+        st.error("Invalid code")
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
 import streamlit as st
