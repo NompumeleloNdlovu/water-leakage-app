@@ -352,37 +352,49 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
+# Helper to set full-page background image
+def set_bg_image(image_file):
+    """Set a full-width fixed background image in Streamlit"""
+    with open(image_file, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    st.markdown(
+        f"""
+        <style>
+        .full-bg {{
+            background-image: url("data:image/jpg;base64,{b64}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            padding: 15px;
+        }}
+        .report-box {{
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }}
+        .report-image {{
+            max-width: 100%;
+            border-radius: 10px;
+            border: 3px solid #555;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 def manage_reports_page():
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Page-level full-width background with semi-transparent overlay
-    st.markdown(
-        f"""
-        <style>
-        .manage-reports-container {{
-            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            padding: 15px;
-            border-radius: 15px;
-            backdrop-filter: brightness(0.85);
-        }}
-        .report-url {{
-            font-weight: bold;
-            color: #003366;
-            margin-top: 5px;
-        }}
-        </style>
-        <div class="manage-reports-container">
-        """,
-        unsafe_allow_html=True
-    )
+    # Set page-level background
+    set_bg_image("images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg")
 
+    st.markdown('<div class="full-bg">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -395,31 +407,22 @@ def manage_reports_page():
 
     # Loop through each report
     for idx, row in df_admin.iterrows():
+        # Set severity color
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
-        with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            # Display main report info (excluding ImageURL)
-            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))
+        with st.expander(f"Report #{row['Reference']} — {row.get('Location','N/A')}"):
+            st.markdown(f'<div class="report-box" style="background-color:{severity_color}">', unsafe_allow_html=True)
 
-            # Display uploaded image
+            # Show report details (exclude ImageURL)
+            display_data = row.drop(labels=['ImageURL'], errors='ignore')
+            st.write(display_data)
+
+            # Show uploaded image if available
             image_url = row.get("ImageURL")
-            if image_url and isinstance(image_url, str):
-                image_url = image_url.strip()
-                if image_url:
-                    # If local file exists, show image
-                    if os.path.exists(image_url):
-                        st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
-                    else:
-                        # Otherwise, display clickable URL
-                        st.markdown(
-                            f"<div class='report-url'>Image URL: <a href='{image_url}' target='_blank'>{image_url}</a></div>",
-                            unsafe_allow_html=True
-                        )
-                else:
-                    st.markdown("<div class='report-url'>No image uploaded</div>", unsafe_allow_html=True)
+            if image_url and isinstance(image_url, str) and image_url.strip():
+                st.image(image_url, caption=f"Report {row['Reference']} Image", use_column_width=True, output_format="auto")
             else:
-                st.markdown("<div class='report-url'>No image uploaded</div>", unsafe_allow_html=True)
+                st.markdown("<i>No image uploaded for this report.</i>", unsafe_allow_html=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -428,10 +431,12 @@ def manage_reports_page():
             options = ["Pending", "Resolved"]
             if current_status not in options:
                 current_status = "Pending"
-            new_status = st.selectbox("Update Status", options, index=options.index(current_status), key=f"status_{idx}")
+            new_status = st.selectbox(
+                "Update Status", options, index=options.index(current_status), key=f"status_{idx}"
+            )
             if st.button("Update", key=f"update_{idx}"):
                 try:
-                    cell = sheet.find(str(row['ReportID']))
+                    cell = sheet.find(str(row['Reference']))
                     sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
@@ -439,6 +444,7 @@ def manage_reports_page():
                     st.error(f"Failed to update status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ------------------ SIDEBAR ------------------
