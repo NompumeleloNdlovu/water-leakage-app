@@ -344,7 +344,7 @@ def dashboard_page():
     if "Municipality" in df.columns:
         top_muni = df['Municipality'].value_counts().nlargest(3).reset_index()
         top_muni.columns = ['Municipality', 'Reports']
-        st.markdown("### 🏆 Top 3 Municipalities by Number of Reports")
+        st.markdown("### Top 3 Municipalities by Number of Reports")
         cols = st.columns(3)
         for i, row in top_muni.iterrows():
             cols[i].metric(row['Municipality'], row['Reports'])
