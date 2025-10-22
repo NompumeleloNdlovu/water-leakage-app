@@ -25,6 +25,13 @@ st.set_page_config(page_title="Drop Watch SA", layout="wide", initial_sidebar_st
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "page" not in st.session_state: st.session_state.page = "Home"
 
+# ------------------ LOGOUT FUNCTION ------------------
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.page = "Login"
+    st.success("You have been logged out.")
+
+
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
     if show_on_page and st.session_state.page not in show_on_page:
@@ -446,9 +453,10 @@ def custom_sidebar():
     if st.sidebar.button("Municipal Overview"): st.session_state.page = "Municipal Overview"
     if st.sidebar.button("Dashboard"): st.session_state.page = "Dashboard"
     if st.sidebar.button("Manage Reports"): st.session_state.page = "Manage Reports"
+    if st.session_state.logged_in:
     if st.sidebar.button("Logout"):
-        st.session_state.logged_in = False
-        st.session_state.page = "Login"
+        logout()
+
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
