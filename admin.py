@@ -100,43 +100,220 @@ def login_page():
 
 # ------------------ HOME PAGE with WELCOME BANNER ------------------
 def home_page():
-    # Welcome banner with image background
-    st.markdown(f"""
-        <div style="
-            background-image: url('images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg');
+    df = load_reports()  # replace with your function to load the reports dataframe
+    if df.empty:
+        st.warning("No reports found yet.")
+        return
+
+    # --- Time-based greeting ---
+    hour = datetime.now().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    # --- Banner with background image ---
+    banner_image = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+
+    st.markdown(
+        f"""
+        <style>
+        .banner {{
+            position: relative;
+            background-image: url("{banner_image}");
             background-size: cover;
             background-position: center;
-            padding: 50px;
+            height: 250px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            margin-bottom: 20px;
+        }}
+        .overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+        }}
+        .banner-text {{
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }}
+        @keyframes pulse {{
+            0% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }}
+            70% {{ box-shadow: 0 0 0 10px rgba(255,0,0,0); }}
+            100% {{ box-shadow: 0 0 0 0 rgba(255,0,0,0); }}
+        }}
+        .pulse-box {{
+            background-color: #ffcccc;
+            color: #a80000;
+            padding: 10px 15px;
             border-radius: 10px;
             text-align: center;
-            color: white;
-        ">
-            <h2>👋 Welcome, <b>{st.session_state.admin_name}</b> from <b>{st.session_state.admin_municipality}</b></h2>
+            font-weight: bold;
+            font-size: 18px;
+            animation: pulse 1.5s infinite;
+        }}
+        </style>
+
+        <div class="banner">
+            <div class="overlay"></div>
+            <div class="banner-text">
+                {greeting}, {st.session_state.admin_name}!<br>
+                Welcome to the {st.session_state.admin_municipality} Admin Portal
+            </div>
         </div>
-        <br>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # --- Date range picker ---
+    min_date = df['DateTime'].min() if "DateTime" in df.columns else datetime.today() - timedelta(days=30)
+    max_date = df['DateTime'].max() if "DateTime" in df.columns else datetime.today()
+    start_date, end_date = st.date_input("Select Date Range", [min_date, max_date])
+
+    df_filtered_range = df
+    if "DateTime" in df.columns:
+        df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
+
+    # --- Municipality selector ---
+    municipalities = df_filtered_range['Municipality'].dropna().unique() if "Municipality" in df_filtered_range.columns else []
+    if len(municipalities) > 0:
+        selected_municipality = st.selectbox("Select Municipality for Detailed Metrics", municipalities)
+        df_filtered = df_filtered_range[df_filtered_range['Municipality'] == selected_municipality]
+    else:
+        df_filtered = df_filtered_range
+
+    # --- Metrics calculations ---
+    total_reports = len(df_filtered)
+    resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
+    pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
+
+    # Reports since last login
+    reports_at_login = st.session_state.get("reports_at_login", total_reports)
+    new_reports = max(total_reports - reports_at_login, 0)
+
+    # --- Live Counter Metrics ---
+    col1, col2, col3, col4 = st.columns(4)
+
+    # Total Reports
+    col1.markdown(f"""
+    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="total_reports">0</div>
+    <script>
+    let i_total = 0;
+    let total = {total_reports};
+    let elem_total = document.getElementById('total_reports');
+    let timer_total = setInterval(() => {{
+        if(i_total <= total){{
+            elem_total.innerHTML = "Total Reports: " + i_total;
+            i_total++;
+        }} else {{
+            clearInterval(timer_total);
+        }}
+    }}, 50);
+    </script>
     """, unsafe_allow_html=True)
 
-    # Live counters below the banner
-    last_month = datetime.today() - timedelta(days=30)
-    df_admin = df[(df['Municipality'] == st.session_state.admin_municipality)]
-    if "DateTime" in df_admin.columns:
-        df_admin = df_admin[df_admin['DateTime'] >= last_month]
+    # Resolved Reports
+    col2.markdown(f"""
+    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="resolved_reports">0</div>
+    <script>
+    let i_resolved = 0;
+    let resolved = {resolved_reports};
+    let elem_resolved = document.getElementById('resolved_reports');
+    let timer_resolved = setInterval(() => {{
+        if(i_resolved <= resolved){{
+            elem_resolved.innerHTML = "Resolved Reports: " + i_resolved;
+            i_resolved++;
+        }} else {{
+            clearInterval(timer_resolved);
+        }}
+    }}, 50);
+    </script>
+    """, unsafe_allow_html=True)
 
-    total_reports = len(df_admin)
-    resolved = (df_admin["Status"] == "Resolved").sum() if "Status" in df_admin.columns else 0
-    pending = (df_admin["Status"] == "Pending").sum() if "Status" in df_admin.columns else 0
+    # Pending Reports (with pulse if >0)
+    with col3:
+        if pending_reports > 0:
+            st.markdown(f"""
+            <div class='pulse-box' id='pending_reports'>0</div>
+            <script>
+            let i_pending = 0;
+            let pending = {pending_reports};
+            let elem_pending = document.getElementById('pending_reports');
+            let timer_pending = setInterval(() => {{
+                if(i_pending <= pending){{
+                    elem_pending.innerHTML = "⚠️ Pending Reports: " + i_pending;
+                    i_pending++;
+                }} else {{
+                    clearInterval(timer_pending);
+                }}
+            }}, 50);
+            </script>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div style='text-align:center;font-weight:bold;'>Pending Reports: {pending_reports}</div>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
-    total_container = col1.empty()
-    resolved_container = col2.empty()
-    pending_container = col3.empty()
+    # New Since Last Login
+    col4.markdown(f"""
+    <div style="font-size:20px;font-weight:bold;color:black;text-align:center;" id="new_reports">0</div>
+    <script>
+    let i_new = 0;
+    let newR = {new_reports};
+    let elem_new = document.getElementById('new_reports');
+    let timer_new = setInterval(() => {{
+        if(i_new <= newR){{
+            elem_new.innerHTML = "New Since Last Login: " + i_new;
+            i_new++;
+        }} else {{
+            clearInterval(timer_new);
+        }}
+    }}, 50);
+    </script>
+    """, unsafe_allow_html=True)
 
-    max_count = max(total_reports, resolved, pending)
-    for i in range(max_count + 1):
-        if i <= total_reports: total_container.metric("Reports in Last 30 Days", i)
-        if i <= resolved: resolved_container.metric("Resolved", i)
-        if i <= pending: pending_container.metric("Pending", i)
-        time.sleep(0.05)
+    # --- Charts ---
+    if not df_filtered.empty:
+        # Leak Type Distribution
+        st.markdown("### Leak Type Distribution")
+        if "Leak Type" in df_filtered.columns:
+            bar_data = df_filtered['Leak Type'].value_counts().reset_index()
+            bar_data.columns = ['Leak Type', 'Count']
+            fig_bar = px.bar(
+                bar_data,
+                x='Leak Type',
+                y='Count',
+                color='Leak Type',
+                color_discrete_sequence=[COLORS['teal_blue'], COLORS['moonstone_blue'], COLORS['powder_blue'], COLORS['magic_mint']],
+                title=f"Leak Reports by Type - {selected_municipality}"
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        # Status Distribution
+        st.markdown("### Status Distribution")
+        if "Status" in df_filtered.columns:
+            pie_data = df_filtered['Status'].value_counts().reset_index()
+            pie_data.columns = ['Status', 'Count']
+            fig_pie = px.pie(
+                pie_data,
+                names='Status',
+                values='Count',
+                color='Status',
+                color_discrete_sequence=[COLORS['moonstone_blue'], COLORS['magic_mint']],
+                title=f"Status Breakdown - {selected_municipality}"
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
 
 # ------------------ MUNICIPAL OVERVIEW ------------------
 def municipal_overview_page():
