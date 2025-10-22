@@ -6,7 +6,7 @@ import plotly.express as px
 import base64
 from datetime import datetime, timedelta
 import time
-
+import os
 # ------------------ CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
 SHEET_KEY = st.secrets["general"]["sheet_id"]
@@ -352,52 +352,37 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
+
 def manage_reports_page():
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Full-width fixed background image
-    bg_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
-    with open(bg_image_path, "rb") as f:
-        data = f.read()
-    b64 = base64.b64encode(data).decode()
+    # Page-level full-width background with semi-transparent overlay
     st.markdown(
         f"""
         <style>
         .manage-reports-container {{
-            background-image: url("data:image/jpg;base64,{b64}");
+            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed;
-            padding: 20px;
-            border-radius: 15px;
-            background-color: rgba(255,255,255,0.85);
-        }}
-        .report-card {{
             padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
-        }}
-        .report-image {{
-            border: 3px solid #555;
             border-radius: 15px;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-            margin-top: 10px;
-            margin-bottom: 10px;
+            backdrop-filter: brightness(0.85);
         }}
         .report-url {{
-            font-size: 14px;
+            font-weight: bold;
             color: #003366;
             margin-top: 5px;
         }}
         </style>
+        <div class="manage-reports-container">
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown('<div class="manage-reports-container">', unsafe_allow_html=True)
     st.markdown("## Manage Reports")
 
     admin_muni = st.session_state.admin_municipality
@@ -408,25 +393,31 @@ def manage_reports_page():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # Loop through each report
     for idx, row in df_admin.iterrows():
-        # Severity color: red for Pending, green for Resolved
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            st.markdown(f"<div class='report-card' style='background-color:{severity_color};'>", unsafe_allow_html=True)
-
-            # Display report info
+            # Display main report info (excluding ImageURL)
+            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
             st.write(row.drop(labels=['ImageURL'], errors='ignore'))
 
-            # Display uploaded image or its URL
+            # Display uploaded image
             image_url = row.get("ImageURL")
-            if image_url and isinstance(image_url, str) and image_url.strip():
-                # Try to render image
-                try:
-                    st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
-                except:
-                    # If image fails, just show the URL
-                    st.markdown(f"<div class='report-url'>Image URL: <a href='{image_url}' target='_blank'>{image_url}</a></div>", unsafe_allow_html=True)
+            if image_url and isinstance(image_url, str):
+                image_url = image_url.strip()
+                if image_url:
+                    # If local file exists, show image
+                    if os.path.exists(image_url):
+                        st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
+                    else:
+                        # Otherwise, display clickable URL
+                        st.markdown(
+                            f"<div class='report-url'>Image URL: <a href='{image_url}' target='_blank'>{image_url}</a></div>",
+                            unsafe_allow_html=True
+                        )
+                else:
+                    st.markdown("<div class='report-url'>No image uploaded</div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div class='report-url'>No image uploaded</div>", unsafe_allow_html=True)
 
