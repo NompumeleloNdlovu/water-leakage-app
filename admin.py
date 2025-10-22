@@ -371,20 +371,35 @@ def manage_reports_page():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    mid_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
+
     # Loop through each report
     for idx, row in df_admin.iterrows():
+        # Highlight Pending reports
         severity_color = "#ffcccc" if row.get("Status", "Pending") == "Pending" else "#ccffcc"
 
+        # Expander with background image
         with st.expander(f"Report #{row['ReportID']} — {row.get('Location','N/A')}"):
-            # Display main report info
-            st.markdown(f"<div style='background-color:{severity_color};padding:10px;border-radius:8px;'>", unsafe_allow_html=True)
-            st.write(row.drop(labels=['ImageURL'], errors='ignore'))  # Exclude image URL from main table
-
-            # Display report images if available
-            image_url = row.get("ImageURL")
-            if image_url and isinstance(image_url, str) and image_url.strip():
-                st.image(image_url, caption=f"Report {row['ReportID']} Image", use_column_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div style="
+                    background-color:{severity_color};
+                    background-image: url('{row.get('ImageURL', '')}');
+                    background-size: cover;
+                    background-position: center;
+                    padding:15px;
+                    border-radius:10px;
+                    min-height:150px;
+                ">
+                    <p style='color:black;font-weight:bold;'>Report Details:</p>
+                    <p>ID: {row['ReportID']}<br>
+                    Location: {row.get('Location','N/A')}<br>
+                    Status: {row.get('Status','Pending')}<br>
+                    Leak Type: {row.get('Leak Type','N/A')}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             # Status update
             current_status = row.get("Status", "Pending")
@@ -401,20 +416,26 @@ def manage_reports_page():
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
-            # Add separator after certain number of reports
-            if idx == len(df_admin)//2:
-                st.markdown(
-                    "<div style='text-align:center;margin:20px 0;'>"
-                    f"<img src='images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg' "
-                    "style='width:70%;border-radius:15px;' />"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
-
+        # Add custom image halfway
+        if idx == len(df_admin)//2:
+            st.markdown(
+                f"""
+                <div style='background-image: url("{mid_image_path}"); 
+                            background-size: cover; 
+                            background-position: center; 
+                            height: 250px; 
+                            border-radius: 15px; 
+                            margin:20px 0;'>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+
 # ------------------ SIDEBAR ------------------
-def custom_sidebar():
+ def custom_sidebar():
     set_background_local("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
                          show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], sidebar=True)
 
