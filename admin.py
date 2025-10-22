@@ -186,14 +186,6 @@ def home_page(df):
     if "DateTime" in df.columns:
         df_filtered_range = df[(df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)]
 
-    # --- Municipality selector ---
-    municipalities = df_filtered_range['Municipality'].dropna().unique() if "Municipality" in df_filtered_range.columns else []
-    if len(municipalities) > 0:
-        selected_municipality = st.selectbox("Select Municipality for Detailed Metrics", municipalities)
-        df_filtered = df_filtered_range[df_filtered_range['Municipality'] == selected_municipality]
-    else:
-        df_filtered = df_filtered_range
-
     # --- Metrics calculations ---
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
