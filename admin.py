@@ -532,6 +532,11 @@ else:
         manage_reports_page(df, sheet)
 
 # Handle deferred rerun (safe to call here)
+import streamlit.runtime.scriptrunner as stsr
+
+# Safe rerun trigger
 if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
     st.session_state._trigger_rerun = False
-    st.experimental_rerun()
+    ctx = stsr.get_script_run_ctx()
+    if ctx and not ctx.in_script_run:  # only rerun if Streamlit is idle
+        st.experimental_rerun()
