@@ -182,7 +182,7 @@ elif page == "Submit Report":
         unsafe_allow_html=True
     )
     # Banner image (top only) – admin homepage image
-    banner_path = "images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg"
+    banner_path = "images/images/download.jpeg"
     st.image(banner_path, use_column_width=True)
 
 
