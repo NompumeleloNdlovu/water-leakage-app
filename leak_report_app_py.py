@@ -115,7 +115,7 @@ def set_sidebar_background(image_file):
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
 
 # Sidebar Navigation
-set_sidebar_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")  # consistent sidebar
+set_sidebar_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")  # consistent sidebar
 st.sidebar.title("Drop Watch SA")
 page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"])
 
