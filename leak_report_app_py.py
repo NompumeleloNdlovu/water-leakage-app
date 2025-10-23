@@ -111,10 +111,14 @@ def set_sidebar_background(image_file):
         unsafe_allow_html=True
     )
 
+
 # ---------------------- PAGE SETUP ----------------------
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
-set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
-set_sidebar_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+
+# Swapped background assignments
+set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+set_sidebar_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
+
 
 # Sidebar Navigation
 st.sidebar.title("Drop Watch SA")
