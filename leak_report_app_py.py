@@ -11,6 +11,16 @@ from google.oauth2.service_account import Credentials
 from email.message import EmailMessage
 import smtplib
 
+# --- Colors (used by the UI) ---
+COLORS = {
+    "teal_blue": "#008080",
+    "moonstone_blue": "#73A9C2",
+    "powder_blue": "#B0E0E6",
+    "magic_mint": "#AAF0D1",
+    "white_smoke": "#F5F5F5"
+}
+
+
 # --- Google Sheets Setup ---
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
