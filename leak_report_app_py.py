@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""leak_report_app.py"""
+"""leak_report_app_modern.py"""
 
 import streamlit as st
 import os
@@ -111,15 +111,11 @@ def set_sidebar_background(image_file):
         unsafe_allow_html=True
     )
 
-
 # ---------------------- PAGE SETUP ----------------------
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
 
-# Swapped background assignments
-set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
-
-
 # Sidebar Navigation
+set_sidebar_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")  # consistent sidebar
 st.sidebar.title("Drop Watch SA")
 page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"])
 
@@ -156,6 +152,7 @@ st.markdown(f"""
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
+    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.title("Welcome to Drop Watch SA")
     st.markdown(
@@ -170,73 +167,27 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
 # ---------------------- SUBMIT REPORT ----------------------
 elif page == "Submit Report":
+    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
-    st.markdown("Provide accurate details to help your municipality respond promptly.")
+    st.markdown("Provide accurate details to assist your municipality in responding promptly.")
 
-    # --- Name Field ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/user.svg' width='20'>
-        <span>Full Name</span>
-    </div>
-    """, unsafe_allow_html=True)
-    name = st.text_input("", placeholder="Enter your full name")
-
-    # --- Email Field ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/mail.svg' width='20'>
-        <span>Email Address</span>
-    </div>
-    """, unsafe_allow_html=True)
-    contact = st.text_input("", placeholder="example@email.com")
-
-    # --- Location Field ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/map-pin.svg' width='20'>
-        <span>Location of Leak</span>
-    </div>
-    """, unsafe_allow_html=True)
-    location = st.text_input("", placeholder="e.g. 123 Main Rd, Soweto")
-
-    # --- Leak Type Field ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/water.svg' width='20'>
-        <span>Type of Leak</span>
-    </div>
-    """, unsafe_allow_html=True)
+    name = st.text_input("Full Name")
+    contact = st.text_input("Email Address", placeholder="example@email.com")
+    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
     leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-    leak_type = st.selectbox("", leak_types)
+    leak_type = st.selectbox("Type of Leak", leak_types)
 
-    # --- Municipality Field ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/building.svg' width='20'>
-        <span>Select Municipality</span>
-    </div>
-    """, unsafe_allow_html=True)
     municipalities = [
         "City of Johannesburg", "City of Cape Town", "eThekwini",
         "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
     ]
-    municipality = st.selectbox("", municipalities)
+    municipality = st.selectbox("Select Municipality", municipalities)
 
-    # --- Image Upload ---
-    st.markdown("""
-    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
-        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/camera.svg' width='20'>
-        <span>Upload Image (Optional)</span>
-    </div>
-    """, unsafe_allow_html=True)
-    image = st.file_uploader("", type=["jpg", "jpeg", "png"])
+    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-    # --- Submit Button ---
     if st.button("Submit Report", use_container_width=True):
         if not name or not contact or not location:
             st.error("All fields are required.")
@@ -271,12 +222,11 @@ elif page == "Submit Report":
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
-
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ---------------------- CHECK STATUS ----------------------
 elif page == "Check Status":
+    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Check Report Status")
     user_ref = st.text_input("Enter Your Reference Code")
