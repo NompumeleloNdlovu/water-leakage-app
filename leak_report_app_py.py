@@ -77,8 +77,8 @@ def send_reference_email(to_email, ref_code, name):
         st.error(f"Email failed: {e}")
         return False
 
-# ---------------------- BACKGROUND ----------------------
-def set_background(image_file):
+# ---------------------- BACKGROUNDS ----------------------
+def set_main_background(image_file):
     with open(image_file, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     st.markdown(
@@ -95,13 +95,30 @@ def set_background(image_file):
         unsafe_allow_html=True
     )
 
+def set_sidebar_background(image_file):
+    with open(image_file, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        [data-testid="stSidebar"] {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 # ---------------------- PAGE SETUP ----------------------
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
-set_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
+set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
+set_sidebar_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
 # Sidebar Navigation
-st.sidebar.title("🌊 Drop Watch SA")
-page = st.sidebar.radio("Navigate", ["🏠 Home", "📤 Submit Report", "📄 Check Status"])
+st.sidebar.title("Drop Watch SA")
+page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"])
 
 # ---------------------- GLOBAL STYLE ----------------------
 st.markdown(f"""
@@ -110,36 +127,51 @@ st.markdown(f"""
         background-color: {COLORS['white_smoke']};
     }}
     .card {{
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 255, 255, 0.9);
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         margin-bottom: 25px;
     }}
+    h1, h2, h3 {{
+        color: {COLORS['teal_blue']};
+    }}
+    button[kind="primary"], div[data-testid="stButton"] button {{
+        background-color: {COLORS['teal_blue']} !important;
+        color: white !important;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        padding: 0.6em 1.2em;
+    }}
+    button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
+        background-color: {COLORS['moonstone_blue']} !important;
+        color: black !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 # ---------------------- HOME PAGE ----------------------
-if page == "🏠 Home":
+if page == "Home":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.title("🚰 Welcome to Drop Watch SA")
+    st.title("Welcome to Drop Watch SA")
     st.markdown(
-        "This platform allows citizens to easily report water leaks across municipalities and track their resolution progress. "
-        "Your participation helps conserve water and improve community infrastructure."
+        "This platform enables citizens to report water leaks directly to their municipalities "
+        "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
     )
-    st.markdown("### How it Works:")
+    st.markdown("### How It Works:")
     st.markdown("""
-    1. Go to **Submit Report** and fill in the leak details.  
+    1. Open **Submit Report** and fill in leak details.  
     2. Receive a **Reference Code** via email.  
-    3. Use that code under **Check Status** to monitor progress.
+    3. Use **Check Status** to monitor the repair progress.
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- SUBMIT REPORT ----------------------
-elif page == "📤 Submit Report":
+elif page == "Submit Report":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.header("📤 Submit a Water Leak Report")
-    st.markdown("Help your municipality respond faster by reporting leaks accurately below.")
+    st.header("Submit a Water Leak Report")
+    st.markdown("Provide accurate details to assist your municipality in responding promptly.")
 
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
@@ -157,9 +189,9 @@ elif page == "📤 Submit Report":
 
     if st.button("Submit Report", use_container_width=True):
         if not name or not contact or not location:
-            st.error("❗ All fields are required.")
+            st.error("All fields are required.")
         elif not is_valid_email(contact):
-            st.error("❗ Please enter a valid email.")
+            st.error("Please enter a valid email address.")
         else:
             image_path = ""
             if image:
@@ -167,7 +199,7 @@ elif page == "📤 Submit Report":
                 image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
                 with open(image_path, "wb") as f:
                     f.write(image.read())
-                st.success("📸 Image uploaded successfully.")
+                st.success("Image uploaded successfully.")
 
             ref_code = str(uuid.uuid4())[:8].upper()
             report = {
@@ -185,16 +217,16 @@ elif page == "📤 Submit Report":
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"✅ Report submitted successfully! Reference Code: **{ref_code}**")
+                st.success(f"Report submitted successfully! Reference Code: {ref_code}")
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- CHECK STATUS ----------------------
-elif page == "📄 Check Status":
+elif page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.header("📄 Check Report Status")
+    st.header("Check Report Status")
     user_ref = st.text_input("Enter Your Reference Code")
 
     if st.button("Check Status", use_container_width=True):
