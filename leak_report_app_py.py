@@ -169,11 +169,29 @@ if page == "Home":
 
 # ---------------------- SUBMIT REPORT ----------------------
 elif page == "Submit Report":
-    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
+    # Remove full-page background for this page
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: {COLORS['white_smoke']};
+            background-image: none;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    # Banner image (top only) – admin homepage image
+    banner_path = "images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg"
+    st.image(banner_path, use_column_width=True)
+
+
+    # Card-style form
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Provide accurate details to assist your municipality in responding promptly.")
 
+    # Form fields
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
     location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
@@ -223,6 +241,7 @@ elif page == "Submit Report":
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------------- CHECK STATUS ----------------------
 elif page == "Check Status":
