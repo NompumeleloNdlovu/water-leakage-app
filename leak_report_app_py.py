@@ -170,39 +170,73 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------- SUBMIT REPORT (Modern Layout) ----------------------
+
+# ---------------------- SUBMIT REPORT ----------------------
 elif page == "Submit Report":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Provide accurate details to help your municipality respond promptly.")
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Reporter Details Card ---
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("Reporter Details")
-    name = st.text_input("Full Name")
-    contact = st.text_input("Email Address", placeholder="example@email.com")
-    st.markdown("</div>", unsafe_allow_html=True)
+    # --- Name Field ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/user.svg' width='20'>
+        <span>Full Name</span>
+    </div>
+    """, unsafe_allow_html=True)
+    name = st.text_input("", placeholder="Enter your full name")
 
-    # --- Leak Details Card ---
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("Leak Details")
-    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+    # --- Email Field ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/mail.svg' width='20'>
+        <span>Email Address</span>
+    </div>
+    """, unsafe_allow_html=True)
+    contact = st.text_input("", placeholder="example@email.com")
 
+    # --- Location Field ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/map-pin.svg' width='20'>
+        <span>Location of Leak</span>
+    </div>
+    """, unsafe_allow_html=True)
+    location = st.text_input("", placeholder="e.g. 123 Main Rd, Soweto")
+
+    # --- Leak Type Field ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/water.svg' width='20'>
+        <span>Type of Leak</span>
+    </div>
+    """, unsafe_allow_html=True)
     leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-    leak_type = st.selectbox("Type of Leak", leak_types)
+    leak_type = st.selectbox("", leak_types)
 
+    # --- Municipality Field ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/building.svg' width='20'>
+        <span>Select Municipality</span>
+    </div>
+    """, unsafe_allow_html=True)
     municipalities = [
         "City of Johannesburg", "City of Cape Town", "eThekwini",
         "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
     ]
-    municipality = st.selectbox("Select Municipality", municipalities)
+    municipality = st.selectbox("", municipalities)
 
-    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg","jpeg","png"])
-    st.markdown("</div>", unsafe_allow_html=True)
+    # --- Image Upload ---
+    st.markdown("""
+    <div style='display:flex; align-items:center; gap:10px; margin-bottom:10px;'>
+        <img src='https://cdn.jsdelivr.net/npm/lucide-static/icons/camera.svg' width='20'>
+        <span>Upload Image (Optional)</span>
+    </div>
+    """, unsafe_allow_html=True)
+    image = st.file_uploader("", type=["jpg", "jpeg", "png"])
 
-    # --- Submit Button Card ---
-    st.markdown("<div class='card' style='text-align:center;'>", unsafe_allow_html=True)
+    # --- Submit Button ---
     if st.button("Submit Report", use_container_width=True):
         if not name or not contact or not location:
             st.error("All fields are required.")
@@ -212,14 +246,11 @@ elif page == "Submit Report":
             image_path = ""
             if image:
                 os.makedirs("leak_images", exist_ok=True)
-                image_path = os.path.join(
-                    "leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
-                )
+                image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
                 with open(image_path, "wb") as f:
                     f.write(image.read())
                 st.success("Image uploaded successfully.")
 
-            # Generate reference code
             ref_code = str(uuid.uuid4())[:8].upper()
             report = {
                 "Reference": ref_code,
@@ -236,10 +267,11 @@ elif page == "Submit Report":
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"Report submitted successfully! Reference Code: **{ref_code}**")
+                st.success(f"Report submitted successfully! Reference Code: {ref_code}")
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
