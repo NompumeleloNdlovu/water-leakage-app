@@ -167,34 +167,21 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------- SUBMIT REPORT ----------------------
+
+       # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
-    # Remove full-page background for this page
+    # ------------------ Banner ------------------
+    banner_path = "images/images/download.jpeg"
     st.markdown(
         f"""
-        <style>
-        .stApp {{
-            background-color: {COLORS['white_smoke']};
-            background-image: none;
-        }}
-        </style>
+        <div style="width:100%; max-height:200px; overflow:hidden; border-radius:15px; margin-bottom:20px;">
+            <img src="{banner_path}" style="width:100%; height:auto; object-fit:cover;">
+        </div>
         """,
         unsafe_allow_html=True
     )
-    # Banner image (top only) – admin homepage image
-    banner_path = "images/images/download.jpeg"
-    
-        st.markdown(
-            f"""
-            <div style="width:100%; max-height:250px; overflow:hidden; border-radius:15px; margin-bottom:20px;">
-                <img src="{banner_path}" style="width:100%; height:auto; object-fit:cover;">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
 
-
-    # Card-style form
+    # ------------------ Form Card ------------------
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Provide accurate details to assist your municipality in responding promptly.")
@@ -248,6 +235,7 @@ elif page == "Submit Report":
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
