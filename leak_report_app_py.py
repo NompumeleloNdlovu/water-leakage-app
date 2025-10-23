@@ -10,8 +10,9 @@ from datetime import datetime
 from google.oauth2.service_account import Credentials
 from email.message import EmailMessage
 import smtplib
+import base64
 
-# --- Colors (used by the UI) ---
+# ---------------------- COLORS ----------------------
 COLORS = {
     "teal_blue": "#008080",
     "moonstone_blue": "#73A9C2",
@@ -20,8 +21,7 @@ COLORS = {
     "white_smoke": "#F5F5F5"
 }
 
-
-# --- Google Sheets Setup ---
+# ---------------------- GOOGLE SHEETS ----------------------
 SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 
 def get_gsheet_client():
@@ -77,80 +77,89 @@ def send_reference_email(to_email, ref_code, name):
         st.error(f"Email failed: {e}")
         return False
 
-# --- UI ---
-st.title("🚰 Water Leakage Reporting")
-# --- Modernized UI ---
-st.markdown(
-    f"""
+# ---------------------- BACKGROUND ----------------------
+def set_background(image_file):
+    with open(image_file, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ---------------------- PAGE SETUP ----------------------
+st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
+set_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
+
+# Sidebar Navigation
+st.sidebar.title("🌊 Drop Watch SA")
+page = st.sidebar.radio("Navigate", ["🏠 Home", "📤 Submit Report", "📄 Check Status"])
+
+# ---------------------- GLOBAL STYLE ----------------------
+st.markdown(f"""
     <style>
-        .main {{
-            background-color: {COLORS['white_smoke']};
-        }}
-        .report-card {{
-            background-color: white;
-            padding: 25px 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }}
-        .stTabs [data-baseweb="tab-list"] button {{
-            background-color: {COLORS['teal_blue']}22;
-            color: {COLORS['teal_blue']};
-            border-radius: 10px;
-            font-weight: 600;
-        }}
-        .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {{
-            background-color: {COLORS['teal_blue']};
-            color: white;
-        }}
-        .submit-btn {{
-            background-color: {COLORS['teal_blue']} !important;
-            color: white !important;
-            border: none;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            transition: all 0.2s ease;
-        }}
-        .submit-btn:hover {{
-            background-color: {COLORS['moonstone_blue']} !important;
-            color: white !important;
-        }}
+    body {{
+        background-color: {COLORS['white_smoke']};
+    }}
+    .card {{
+        background-color: rgba(255, 255, 255, 0.85);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }}
     </style>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
-st.markdown(
-    f"<h1 style='text-align:center; color:{COLORS['teal_blue']};'>🚰 Water Leakage Reporting</h1>",
-    unsafe_allow_html=True
-)
+# ---------------------- HOME PAGE ----------------------
+if page == "🏠 Home":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.title("🚰 Welcome to Drop Watch SA")
+    st.markdown(
+        "This platform allows citizens to easily report water leaks across municipalities and track their resolution progress. "
+        "Your participation helps conserve water and improve community infrastructure."
+    )
+    st.markdown("### How it Works:")
+    st.markdown("""
+    1. Go to **Submit Report** and fill in the leak details.  
+    2. Receive a **Reference Code** via email.  
+    3. Use that code under **Check Status** to monitor progress.
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-tabs = st.tabs(["📤 Submit Report", "📄 Check Status"])
-
-# -------------------- Submit Report --------------------
-with tabs[0]:
-    st.markdown("<div class='report-card'>", unsafe_allow_html=True)
-    st.subheader("💧 Report a Leak")
-    st.markdown("Help your community by reporting water leaks accurately and promptly. Fill in the details below:")
+# ---------------------- SUBMIT REPORT ----------------------
+elif page == "📤 Submit Report":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("📤 Submit a Water Leak Report")
+    st.markdown("Help your municipality respond faster by reporting leaks accurately below.")
 
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
     location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-    leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-    municipality = st.selectbox(
-        "Select Municipality",
-        ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"]
-    )
+    leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
+    leak_type = st.selectbox("Type of Leak", leak_types)
+
+    municipalities = [
+        "City of Johannesburg", "City of Cape Town", "eThekwini",
+        "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+    ]
+    municipality = st.selectbox("Select Municipality", municipalities)
+
     image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-    submit = st.button("🚀 Submit Report", key="submit_report", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if submit:
+    if st.button("Submit Report", use_container_width=True):
         if not name or not contact or not location:
-            st.error("❗ All required fields must be filled.")
+            st.error("❗ All fields are required.")
         elif not is_valid_email(contact):
-            st.error("❗ Please enter a valid email address.")
+            st.error("❗ Please enter a valid email.")
         else:
             image_path = ""
             if image:
@@ -158,6 +167,7 @@ with tabs[0]:
                 image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
                 with open(image_path, "wb") as f:
                     f.write(image.read())
+                st.success("📸 Image uploaded successfully.")
 
             ref_code = str(uuid.uuid4())[:8].upper()
             report = {
@@ -175,16 +185,17 @@ with tabs[0]:
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"✅ Report submitted successfully!\n\nYour reference: **{ref_code}**\n\nCheck your email for confirmation.")
+                st.success(f"✅ Report submitted successfully! Reference Code: **{ref_code}**")
+                st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# -------------------- Check Status --------------------
-with tabs[1]:
-    st.markdown("<div class='report-card'>", unsafe_allow_html=True)
-    st.subheader("🔍 Check Report Status")
-
-    user_ref = st.text_input("Enter Your Reference Code", placeholder="e.g. 4A9F2CDE")
+# ---------------------- CHECK STATUS ----------------------
+elif page == "📄 Check Status":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("📄 Check Report Status")
+    user_ref = st.text_input("Enter Your Reference Code")
 
     if st.button("Check Status", use_container_width=True):
         try:
@@ -194,17 +205,15 @@ with tabs[1]:
             match = next((row for row in records if row["Reference"] == user_ref), None)
 
             if match:
-                st.info(f"ℹ️ Status for **{user_ref}**: {match['Status']}")
+                st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
-
                 image_path = match.get("ImageURL", "")
                 if image_path and os.path.exists(image_path):
-                    st.image(image_path, caption=f"Report {user_ref} Image", use_container_width=True)
+                    st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
             else:
                 st.warning("Reference code not found.")
         except Exception as e:
             st.error(f"Could not check status: {e}")
-
     st.markdown("</div>", unsafe_allow_html=True)
