@@ -69,33 +69,78 @@ def send_reference_email(to_email, ref_code, name):
 
 # --- UI ---
 st.title("🚰 Water Leakage Reporting")
+# --- Modernized UI ---
+st.markdown(
+    f"""
+    <style>
+        .main {{
+            background-color: {COLORS['white_smoke']};
+        }}
+        .report-card {{
+            background-color: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }}
+        .stTabs [data-baseweb="tab-list"] button {{
+            background-color: {COLORS['teal_blue']}22;
+            color: {COLORS['teal_blue']};
+            border-radius: 10px;
+            font-weight: 600;
+        }}
+        .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {{
+            background-color: {COLORS['teal_blue']};
+            color: white;
+        }}
+        .submit-btn {{
+            background-color: {COLORS['teal_blue']} !important;
+            color: white !important;
+            border: none;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease;
+        }}
+        .submit-btn:hover {{
+            background-color: {COLORS['moonstone_blue']} !important;
+            color: white !important;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f"<h1 style='text-align:center; color:{COLORS['teal_blue']};'>🚰 Water Leakage Reporting</h1>",
+    unsafe_allow_html=True
+)
 
 tabs = st.tabs(["📤 Submit Report", "📄 Check Status"])
 
+# -------------------- Submit Report --------------------
 with tabs[0]:
-    st.subheader("Report a Leak")
-    st.markdown("👥 **Help your community by reporting water leaks accurately and promptly.**")
-    st.markdown("Fill in the details below:")
+    st.markdown("<div class='report-card'>", unsafe_allow_html=True)
+    st.subheader("💧 Report a Leak")
+    st.markdown("Help your community by reporting water leaks accurately and promptly. Fill in the details below:")
 
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
     location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-    leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-    leak_type = st.selectbox("Type of Leak", leak_types)
-
-    municipalities = [
-        "City of Johannesburg", "City of Cape Town", "eThekwini",
-        "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
-    ]
-    municipality = st.selectbox("Select Municipality", municipalities)
-
+    leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+    municipality = st.selectbox(
+        "Select Municipality",
+        ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"]
+    )
     image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
 
-    if st.button("Submit Report"):
+    submit = st.button("🚀 Submit Report", key="submit_report", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if submit:
         if not name or not contact or not location:
-            st.error("❗ All fields are required.")
+            st.error("❗ All required fields must be filled.")
         elif not is_valid_email(contact):
-            st.error("❗ Please enter a valid email.")
+            st.error("❗ Please enter a valid email address.")
         else:
             image_path = ""
             if image:
@@ -103,11 +148,8 @@ with tabs[0]:
                 image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
                 with open(image_path, "wb") as f:
                     f.write(image.read())
-                st.success(f"Image uploaded successfully: {image_path}")
 
-            # Generate reference
             ref_code = str(uuid.uuid4())[:8].upper()
-
             report = {
                 "Reference": ref_code,
                 "Name": name,
@@ -123,15 +165,18 @@ with tabs[0]:
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"✅ Report submitted. Reference: **{ref_code}**\n\nCheck your email for confirmation.")
+                st.success(f"✅ Report submitted successfully!\n\nYour reference: **{ref_code}**\n\nCheck your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
+# -------------------- Check Status --------------------
 with tabs[1]:
-    st.subheader("Check Report Status")
-    user_ref = st.text_input("Enter Your Reference Code")
+    st.markdown("<div class='report-card'>", unsafe_allow_html=True)
+    st.subheader("🔍 Check Report Status")
 
-    if st.button("Check Status"):
+    user_ref = st.text_input("Enter Your Reference Code", placeholder="e.g. 4A9F2CDE")
+
+    if st.button("Check Status", use_container_width=True):
         try:
             client = get_gsheet_client()
             sheet = client.open_by_key(SPREADSHEET_ID).sheet1
@@ -141,13 +186,15 @@ with tabs[1]:
             if match:
                 st.info(f"ℹ️ Status for **{user_ref}**: {match['Status']}")
                 st.write(match)
-                # Show uploaded image if exists
+
                 image_path = match.get("ImageURL", "")
                 if image_path and os.path.exists(image_path):
-                    st.image(image_path, caption=f"Report {user_ref} Image", use_column_width=True)
+                    st.image(image_path, caption=f"Report {user_ref} Image", use_container_width=True)
                 else:
                     st.info("No image uploaded for this report.")
             else:
                 st.warning("Reference code not found.")
         except Exception as e:
             st.error(f"Could not check status: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
