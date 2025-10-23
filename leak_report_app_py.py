@@ -170,15 +170,25 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------- SUBMIT REPORT ----------------------
+# ---------------------- SUBMIT REPORT (Modern Layout) ----------------------
 elif page == "Submit Report":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
-    st.markdown("Provide accurate details to assist your municipality in responding promptly.")
+    st.markdown("Provide accurate details to help your municipality respond promptly.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- Reporter Details Card ---
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Reporter Details")
     name = st.text_input("Full Name")
     contact = st.text_input("Email Address", placeholder="example@email.com")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Leak Details Card ---
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Leak Details")
     location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+
     leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
     leak_type = st.selectbox("Type of Leak", leak_types)
 
@@ -188,8 +198,11 @@ elif page == "Submit Report":
     ]
     municipality = st.selectbox("Select Municipality", municipalities)
 
-    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg","jpeg","png"])
+    st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- Submit Button Card ---
+    st.markdown("<div class='card' style='text-align:center;'>", unsafe_allow_html=True)
     if st.button("Submit Report", use_container_width=True):
         if not name or not contact or not location:
             st.error("All fields are required.")
@@ -199,11 +212,14 @@ elif page == "Submit Report":
             image_path = ""
             if image:
                 os.makedirs("leak_images", exist_ok=True)
-                image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
+                image_path = os.path.join(
+                    "leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
+                )
                 with open(image_path, "wb") as f:
                     f.write(image.read())
                 st.success("Image uploaded successfully.")
 
+            # Generate reference code
             ref_code = str(uuid.uuid4())[:8].upper()
             report = {
                 "Reference": ref_code,
@@ -220,11 +236,12 @@ elif page == "Submit Report":
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"Report submitted successfully! Reference Code: {ref_code}")
+                st.success(f"Report submitted successfully! Reference Code: **{ref_code}**")
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------------- CHECK STATUS ----------------------
 elif page == "Check Status":
