@@ -183,7 +183,15 @@ elif page == "Submit Report":
     )
     # Banner image (top only) – admin homepage image
     banner_path = "images/images/download.jpeg"
-    st.image(banner_path, use_column_width=True)
+    
+        st.markdown(
+            f"""
+            <div style="width:100%; max-height:250px; overflow:hidden; border-radius:15px; margin-bottom:20px;">
+                <img src="{banner_path}" style="width:100%; height:auto; object-fit:cover;">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 
     # Card-style form
