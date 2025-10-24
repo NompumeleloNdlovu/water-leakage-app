@@ -195,13 +195,14 @@ if page == "Home":
                 left: 50%;
                 transform: translate(-50%, -50%);
                 color: white;
-                font-size: 28px;
+                font-size: 36px;
                 font-weight: bold;
                 text-align: center;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+                text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
                 font-family: 'Poppins', sans-serif;
+                letter-spacing: 1px;
             ">
-                Report a Water Leak
+                Drop Watch SA
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -220,10 +221,10 @@ if page == "Home":
         ">
             <h2 style="color:#004aad;">Welcome to Drop Watch SA</h2>
             <p>
-                Drop Watch SA is a citizen-driven water leakage reporting platform that helps connect communities
-                with their local municipalities. The app allows users to report water leaks, provide photos and
-                location details, and track repair progress — helping conserve water and support sustainable water
-                management in South Africa.
+                Drop Watch SA is a citizen-driven water leakage reporting platform that empowers communities
+                to take action against water waste. It allows users to report leaks, upload images, provide location
+                details, and track the progress of repairs — promoting responsible water management and collaboration
+                with local municipalities across South Africa.
             </p>
 
             <h3 style="color:#004aad;">How It Works</h3>
@@ -234,12 +235,14 @@ if page == "Home":
             </ol>
 
             <p>
-                Together, we can make a difference by saving every drop. Start by submitting your first report today.
+                Together, we can make a difference — saving every drop for a sustainable future.
+                Start by submitting your first report today.
             </p>
         </div>
         """,
         unsafe_allow_html=True
     )
+
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
