@@ -175,9 +175,6 @@ def save_image_locally(image):
 import base64
 from pathlib import Path
 
-# --- Sidebar navigation handles pages ---
-# page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"], index=0)
-
 if page == "Home":
     # --- Banner Image ---
     banner_path = Path("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
@@ -194,17 +191,17 @@ if page == "Home":
                 margin-bottom: 50px;
             ">
                 <img src="data:image/jpg;base64,{banner_base64}" 
-                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.6);">
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.45);">
                 <div style="
                     position: absolute;
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    color: white;
+                    color: #f5f5f5;
                     font-size: 42px;
                     font-weight: 800;
                     text-align: center;
-                    text-shadow: 2px 2px 12px rgba(0,0,0,0.7);
+                    text-shadow: 3px 3px 12px rgba(0,0,0,0.6);
                     font-family: 'Poppins', sans-serif;
                 ">
                     Drop Watch SA
@@ -214,39 +211,64 @@ if page == "Home":
     else:
         st.warning("⚠ Banner image not found. Please check the file path.")
 
-    # --- Modern Info Card ---
+    # --- Softer Modern Info Card with Hover Effects ---
     st.markdown("""
         <div style="
-            max-width: 950px;
+            max-width: 900px;
             margin: 0 auto 60px auto;
             padding: 50px;
             border-radius: 25px;
-            background: linear-gradient(145deg, #f0f8ff, #ffffff);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            background: linear-gradient(145deg, #eef2f5, #ffffff);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             font-family: 'Poppins', sans-serif;
-            color: #1a1a1a;
+            color: #2c2c2c;
         ">
-            <h2 style="color:#004aad; font-size:2.4rem; font-weight:800; text-align:center; margin-bottom:30px;">
+            <h2 style="color:#003366; font-size:2.2rem; font-weight:700; text-align:center; margin-bottom:30px;">
                 Welcome to Drop Watch SA
             </h2>
-            <p style="font-size:1.15rem; line-height:1.9; text-align:justify;">
+            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
                 directly to their local municipalities. Users can provide details, upload images, specify exact locations,
                 and monitor repair progress — all in one place.
             </p>
-            <p style="font-size:1.15rem; line-height:1.9; text-align:justify;">
+            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Every report helps conserve water and strengthens our infrastructure. Together, we can save every drop.
             </p>
-            <h3 style="color:#004aad; font-size:1.8rem; margin-top:40px; margin-bottom:15px; text-align:center;">
+            <h3 style="color:#003366; font-size:1.6rem; margin-top:40px; margin-bottom:20px; text-align:center;">
                 How It Works
             </h3>
-            <ol style="font-size:1.1rem; line-height:1.8; padding-left:25px;">
-                <li>Go to the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
-                <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
-                <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
+            <ol style="font-size:1.05rem; line-height:1.7; padding-left:25px;">
+                <li style="
+                    padding: 10px; 
+                    margin-bottom: 8px; 
+                    border-radius: 10px;
+                    transition: all 0.3s ease; 
+                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                   onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
+                    Open the <b>Submit Report</b> page and provide leak details, including location and photos.
+                </li>
+                <li style="
+                    padding: 10px; 
+                    margin-bottom: 8px; 
+                    border-radius: 10px;
+                    transition: all 0.3s ease; 
+                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                   onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
+                    Receive a unique <b>Reference Code</b> via email for tracking.
+                </li>
+                <li style="
+                    padding: 10px; 
+                    margin-bottom: 8px; 
+                    border-radius: 10px;
+                    transition: all 0.3s ease; 
+                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                   onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
+                    Visit the <b>Check Status</b> page to monitor the repair progress in real time.
+                </li>
             </ol>
         </div>
     """, unsafe_allow_html=True)
+
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
