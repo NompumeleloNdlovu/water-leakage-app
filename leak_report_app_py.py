@@ -161,37 +161,6 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 # ---------------------- GOOGLE DRIVE UPLOAD ----------------------
 from mimetypes import guess_type
 
-def upload_to_drive(file_path, file_name):
-    """Uploads an image to Google Drive and returns a public URL."""
-    try:
-        creds = Credentials.from_service_account_info(
-            st.secrets["google_service_account"],
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
-        drive_service = build("drive", "v3", credentials=creds)
-        folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # shared folder
-
-        mime_type = guess_type(file_name)[0] or "application/octet-stream"
-        file_metadata = {"name": file_name, "parents": [folder_id]}
-        media = MediaFileUpload(file_path, mimetype=mime_type)
-
-        uploaded_file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields="id"
-        ).execute()
-
-        # Make file publicly viewable
-        drive_service.permissions().create(
-            fileId=uploaded_file.get("id"),
-            body={"role": "reader", "type": "anyone"}
-        ).execute()
-
-        return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
-
-    except Exception as e:
-        st.error(f"Google Drive upload failed: {e}")
-        return None
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
@@ -207,7 +176,45 @@ if page == "Home":
     1. Open **Submit Report** and fill in leak details.  
     2. Receive a **Reference Code** via email.  
     3. Use **Check Status** to monitor the repair progress.
-    """)
+    """)def upload_to_drive(file_path, file_name):
+    """Uploads an image to a Google Shared Drive and returns a public URL."""
+    creds = Credentials.from_service_account_info(
+        st.secrets["google_service_account"],
+        scopes=["https://www.googleapis.com/auth/drive"]
+    )
+    drive_service = build("drive", "v3", credentials=creds)
+
+    # Shared Drive ID
+    shared_drive_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # Replace with your shared drive ID
+
+    # File metadata with parent folder in the shared drive
+    file_metadata = {
+        "name": file_name,
+        "parents": [shared_drive_id]
+    }
+
+    media = MediaFileUpload(file_path, mimetype="image/jpeg")
+
+    try:
+        uploaded_file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id",
+            supportsAllDrives=True  # Important for shared drives
+        ).execute()
+
+        # Make the file publicly viewable
+        drive_service.permissions().create(
+            fileId=uploaded_file.get("id"),
+            body={"role": "reader", "type": "anyone"},
+            supportsAllDrives=True
+        ).execute()
+
+        return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
+    except Exception as e:
+        st.error(f"Google Drive upload failed: {e}")
+        return ""
+
     st.markdown("</div>", unsafe_allow_html=True)
 
     
