@@ -189,29 +189,65 @@ def save_image_locally(image):
     return image_path
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-if page == "Submit Report":
+elif page == "Submit Report":
+    # --- Banner (small banner image) ---
+    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            img_base64 = base64.b64encode(f.read()).decode()
+        st.markdown(f"""
+            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
+                <img src="data:image/jpg;base64,{img_base64}" 
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
+                            font-family:'Poppins', sans-serif;">
+                    Report a Water Leak
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠ Banner image not found. Please check the file path.")
+
+    # --- Form Container ---
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
-    
-    # Collect user input
-    name = st.text_input("Full Name")
-    contact = st.text_input("Email Address", placeholder="example@email.com")
-    municipality = st.selectbox("Select Municipality", ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"])
-    leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
-    submit_clicked = st.button("Submit Report", use_container_width=True)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        name = st.text_input("Full Name")
+        contact = st.text_input("Email Address", placeholder="example@email.com")
+        municipality = st.selectbox(
+            "Select Municipality",
+            [
+                "City of Johannesburg", "City of Cape Town", "eThekwini",
+                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+            ]
+        )
+
+    with col2:
+        leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+        location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+        image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
+
+    st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
+    submit_clicked = st.button("Submit Report", use_container_width=False)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit_clicked:
         if not name or not contact or not location:
             st.error("All fields are required.")
+        elif not is_valid_email(contact):
+            st.error("Please enter a valid email address.")
         else:
-            # Save image locally
+            # --- Save Image Locally ---
             if image:
-                image_path = save_image_locally(image)
-                st.success(f"✅ Image saved locally! File path: {image_path}")
+                os.makedirs("leak_images", exist_ok=True)
+                image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
+                with open(image_path, "wb") as f:
+                    f.write(image.read())
             else:
                 image_path = ""
 
@@ -231,10 +267,9 @@ if page == "Submit Report":
             }
 
             try:
-                save_report_to_sheet(report)  # Save to Google Sheets or database
-                send_reference_email(contact, ref_code, name)  # Send email to user
+                save_report_to_sheet(report)
+                send_reference_email(contact, ref_code, name)
 
-                # Show success message
                 st.markdown(f"""
                     <div style="background-color:#E8F5E9;border-left:5px solid #008080;
                                 border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
@@ -245,12 +280,10 @@ if page == "Submit Report":
                         <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
                     </div>
                 """, unsafe_allow_html=True)
-
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ---------------------- CHECK STATUS PAGE ----------------------
 if page == "Check Status":
