@@ -400,8 +400,8 @@ elif page == "Submit Report":
 
 # ---------------------- CHECK STATUS PAGE ----------------------
 elif page == "Check Status":
-st.markdown("<div class='card'>", unsafe_allow_html=True)
-st.header("Check Report Status")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("Check Report Status")
 
 # User input
 user_reportid = st.text_input("Enter Your Report ID")
