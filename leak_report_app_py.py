@@ -11,6 +11,8 @@ from google.oauth2.service_account import Credentials
 from email.message import EmailMessage
 import smtplib
 import base64
+from pathlib import Path
+ 
 
 # ---------------------- COLORS ----------------------
 COLORS = {
@@ -169,9 +171,7 @@ if page == "Home":
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-   import base64
-    from pathlib import Path
- 
+  
 elif page == "Submit Report":
  
     # --- Banner (Admin homepage image) ---
