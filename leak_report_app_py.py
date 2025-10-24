@@ -159,31 +159,39 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 """, unsafe_allow_html=True)
 
 # ---------------------- GOOGLE DRIVE UPLOAD ----------------------
+from mimetypes import guess_type
+
 def upload_to_drive(file_path, file_name):
-    creds = Credentials.from_service_account_info(
-        st.secrets["google_service_account"],
-        scopes=["https://www.googleapis.com/auth/drive"]
-    )
-    drive_service = build("drive", "v3", credentials=creds)
-    folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"
+    """Uploads an image to Google Drive and returns a public URL."""
+    try:
+        creds = Credentials.from_service_account_info(
+            st.secrets["google_service_account"],
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        drive_service = build("drive", "v3", credentials=creds)
+        folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # shared folder
 
-    file_metadata = {"name": file_name, "parents": [folder_id]}
-    media = MediaFileUpload(file_path, mimetype="image/jpeg")
+        mime_type = guess_type(file_name)[0] or "application/octet-stream"
+        file_metadata = {"name": file_name, "parents": [folder_id]}
+        media = MediaFileUpload(file_path, mimetype=mime_type)
 
-    uploaded_file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields="id"
-    ).execute()
+        uploaded_file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id"
+        ).execute()
 
-    # Make file public
-    drive_service.permissions().create(
-        fileId=uploaded_file.get("id"),
-        body={"role": "reader", "type": "anyone"}
-    ).execute()
+        # Make file publicly viewable
+        drive_service.permissions().create(
+            fileId=uploaded_file.get("id"),
+            body={"role": "reader", "type": "anyone"}
+        ).execute()
 
-    return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
+        return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
 
+    except Exception as e:
+        st.error(f"Google Drive upload failed: {e}")
+        return None
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
