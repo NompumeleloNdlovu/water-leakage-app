@@ -399,6 +399,7 @@ elif page == "Submit Report":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- CHECK STATUS PAGE ----------------------
+elif page == "Check Status":
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.header("Check Report Status")
 
