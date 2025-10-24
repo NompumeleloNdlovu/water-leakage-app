@@ -71,7 +71,8 @@ def send_reference_email(to_email, ref_code, name):
     msg["From"] = sender_email
     msg["To"] = to_email
     msg.set_content(
-        f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\n\nUse this code in the app to check the status.\n\nRegards,\nMunicipal Water Department"
+        f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\n\n"
+        "Use this code in the app to check the status.\n\nRegards,\nMunicipal Water Department"
     )
 
     try:
@@ -85,43 +86,44 @@ def send_reference_email(to_email, ref_code, name):
 
 # ---------------------- BACKGROUNDS ----------------------
 def set_main_background(image_file):
-    with open(image_file, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    if os.path.exists(image_file):
+        with open(image_file, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
+        st.markdown(
+            f"""
+            <style>
+            .stApp {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
 def set_sidebar_background(image_file):
-    with open(image_file, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        [data-testid="stSidebar"] {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-            background-position: center;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    if os.path.exists(image_file):
+        with open(image_file, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
+        st.markdown(
+            f"""
+            <style>
+            [data-testid="stSidebar"] {{
+                background-image: url("data:image/jpg;base64,{encoded}");
+                background-size: cover;
+                background-position: center;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
 # ---------------------- PAGE SETUP ----------------------
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
-
-# Sidebar Navigation
 set_sidebar_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
+
 st.sidebar.title("Drop Watch SA")
 page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"])
 
@@ -175,159 +177,67 @@ if page == "Home":
 
 # ---------------------- GOOGLE DRIVE UPLOAD ----------------------
 def upload_to_drive(file_path, file_name):
-    """Uploads an image to Google Drive and returns a public URL."""
     creds = Credentials.from_service_account_info(
         st.secrets["google_service_account"],
         scopes=["https://www.googleapis.com/auth/drive"]
     )
     drive_service = build("drive", "v3", credentials=creds)
-
     folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"
-
     file_metadata = {"name": file_name, "parents": [folder_id]}
     media = MediaFileUpload(file_path, mimetype="image/jpeg")
-
     uploaded_file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields="id"
+        body=file_metadata, media_body=media, fields="id"
     ).execute()
-
-    # Make file publicly viewable
+    # Make file public
     drive_service.permissions().create(
         fileId=uploaded_file.get("id"),
         body={"role": "reader", "type": "anyone"}
     ).execute()
-
     return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
-            # --- Banner ---
-            banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
-            if banner_path.exists():
-                with open(banner_path, "rb") as f:
-                    img_base64 = base64.b64encode(f.read()).decode()
-                st.markdown(f"""
-                    <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
-                        <img src="data:image/jpg;base64,{img_base64}" 
-                             style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                                    color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
-                                    font-family:'Poppins', sans-serif;">
-                            Report a Water Leak
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.warning("⚠️ Banner image not found.")
+    # Banner
+    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            img_base64 = base64.b64encode(f.read()).decode()
+        st.markdown(f"""
+            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
+                <img src="data:image/jpg;base64,{img_base64}" 
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
+                            font-family:'Poppins', sans-serif;">
+                    Report a Water Leak
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ Banner image not found.")
 
-    # --- Form Container ---
+    # Form container
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
     col1, col2 = st.columns(2)
-
     with col1:
         name = st.text_input("Full Name")
         contact = st.text_input("Email Address", placeholder="example@email.com")
-        municipality = st.selectbox(
-            "Select Municipality",
-            [
-                "City of Johannesburg", "City of Cape Town", "eThekwini",
-                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
-            ]
-        )
-
+        municipality = st.selectbox("Select Municipality", [
+            "City of Johannesburg", "City of Cape Town", "eThekwini",
+            "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+        ])
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
         location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-        image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
+        image = st.file_uploader("Upload an image (optional)", type=["jpg","jpeg","png"])
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit_clicked:
-        if not name or not contact or not location:
-            st.error("All fields are required.")
-        elif not is_valid_email(contact):
-            st.error("Please enter a valid email address.")
-        else:
-            # --- Handle Image Upload ---
-            if image:
-                os.makedirs("temp", exist_ok=True)
-                temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
-                with open(temp_path, "wb") as f:
-                    f.write(image.read())
+        if
 
-                st.info("📤 Uploading image to Google Drive...")
-                image_path = upload_to_drive(temp_path, image.name)
-                st.success("✅ Image uploaded successfully!")
-                os.remove(temp_path)
-            else:
-                image_path = ""
-
-            ref_code = str(uuid.uuid4())[:8].upper()
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            report = {
-                "Reference": ref_code,
-                "Name": name,
-                "Contact": contact,
-                "Municipality": municipality,
-                "Leak Type": leak_type,
-                "Location": location,
-                "DateTime": timestamp,
-                "ImageURL": image_path,
-                "Status": "Pending"
-            }
-
-            try:
-                save_report_to_sheet(report)
-                send_reference_email(contact, ref_code, name)
-
-                st.markdown(f"""
-                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
-                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
-                        <p><b>Reference Code:</b> {ref_code}</p>
-                        <p><b>Date & Time:</b> {timestamp}</p>
-                        <p><b>Confirmation sent to:</b> {contact}</p>
-                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
-                    </div>
-                """, unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"Failed to save report: {e}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------------- CHECK STATUS ----------------------
-elif page == "Check Status":
-    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.header("Check Report Status")
-    user_ref = st.text_input("Enter Your Reference Code")
-
-    if st.button("Check Status", use_container_width=True):
-        try:
-            client = get_gsheet_client()
-            sheet = client.open_by_key(SPREADSHEET_ID).sheet1
-            records = sheet.get_all_records()
-            match = next((row for row in records if row["Reference"] == user_ref), None)
-
-            if match:
-                st.success(f"Status for {user_ref}: {match['Status']}")
-                st.write(match)
-                image_path = match.get("ImageURL", "")
-                if image_path:
-                    st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
-                else:
-                    st.info("No image uploaded for this report.")
-            else:
-                st.warning("Reference code not found.")
-        except Exception as e:
-            st.error(f"Could not check status: {e}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
