@@ -425,7 +425,7 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- MANAGE REPORTS PAGE ----------------------
-elif st.session_state.page == "Manage Reports":
+elif page == "Manage Reports":
     st.header("Manage Submitted Reports")
 
     try:
@@ -455,9 +455,14 @@ elif st.session_state.page == "Manage Reports":
 
                     if lat and lon:
                         st.markdown(f"**📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
-                        m = folium.Map(location=[lat, lon], zoom_start=16)
-                        folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
-                        st_folium(m, height=250, width=600)
+                        try:
+                            import folium
+                            from streamlit_folium import st_folium
+                            m = folium.Map(location=[lat, lon], zoom_start=16)
+                            folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
+                            st_folium(m, height=250, width=600)
+                        except ModuleNotFoundError:
+                            st.info("Install `streamlit-folium` to enable the location map view.")
                     elif address:
                         st.markdown(f"**📍 Location:** {address}")
                     else:
@@ -481,6 +486,7 @@ elif st.session_state.page == "Manage Reports":
 
     except Exception as e:
         st.error(f"Failed to load reports: {e}")
+
 
 
 # ------------------ SIDEBAR ------------------
