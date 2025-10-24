@@ -14,11 +14,6 @@ import base64
 from pathlib import Path
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google.oauth2.service_account import Credentials
-
-
-
- 
 
 # ---------------------- COLORS ----------------------
 COLORS = {
@@ -35,7 +30,10 @@ SPREADSHEET_ID = "1leh-sPgpoHy3E62l_Rnc11JFyyF-kBNlWTICxW1tam8"
 def get_gsheet_client():
     creds = Credentials.from_service_account_info(
         st.secrets["google_service_account"],
-        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
     )
     return gspread.authorize(creds)
 
@@ -123,7 +121,7 @@ def set_sidebar_background(image_file):
 st.set_page_config(page_title="Drop Watch SA", page_icon="🚰", layout="centered")
 
 # Sidebar Navigation
-set_sidebar_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")  # consistent sidebar
+set_sidebar_background("images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg")
 st.sidebar.title("Drop Watch SA")
 page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"])
 
@@ -175,7 +173,7 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
+# ---------------------- GOOGLE DRIVE UPLOAD ----------------------
 def upload_to_drive(file_path, file_name):
     """Uploads an image to Google Drive and returns a public URL."""
     creds = Credentials.from_service_account_info(
@@ -184,7 +182,7 @@ def upload_to_drive(file_path, file_name):
     )
     drive_service = build("drive", "v3", credentials=creds)
 
-    folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # your shared folder ID
+    folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"
 
     file_metadata = {"name": file_name, "parents": [folder_id]}
     media = MediaFileUpload(file_path, mimetype="image/jpeg")
@@ -201,51 +199,28 @@ def upload_to_drive(file_path, file_name):
         body={"role": "reader", "type": "anyone"}
     ).execute()
 
-    file_url = f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
-    return file_url
+    return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-  
 elif page == "Submit Report":
- 
-    # --- Banner (Admin homepage image) ---
+    # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
-
     if banner_path.exists():
         with open(banner_path, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode()
-
-        st.markdown(
-            f"""
-            <div style="
-                position: relative;
-                width: 100%;
-                height: 140px;
-                overflow: hidden;
-                border-radius: 15px;
-                margin-bottom: 25px;
-            ">
+        st.markdown(f"""
+            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
                 <img src="data:image/jpg;base64,{img_base64}" 
                      style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-                <div style="
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    color: white;
-                    font-size: 26px;
-                    font-weight: bold;
-                    text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
-                    font-family: 'Poppins', sans-serif;
-                ">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
+                            font-family:'Poppins', sans-serif;">
                     Report a Water Leak
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
     else:
-        st.warning("⚠️ Banner image not found — please check the file path.")
+        st.warning("⚠️ Banner image not found.")
 
     # --- Form Container ---
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -280,24 +255,19 @@ elif page == "Submit Report":
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
-            image_path = ""
+            # --- Handle Image Upload ---
             if image:
-             # Save temporarily before upload
-             temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
-             os.makedirs("temp", exist_ok=True)
-             with open(temp_path, "wb") as f:
-                 f.write(image.read())
-         
-             # Upload to Google Drive
-             st.info(" Uploading image to Google Drive...")
-             image_path = upload_to_drive(temp_path, image.name)
-             st.success("✅ Image uploaded successfully!")
-         
-             # Remove temporary file
-             os.remove(temp_path)
-         else:
-             image_path = ""
+                os.makedirs("temp", exist_ok=True)
+                temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
+                with open(temp_path, "wb") as f:
+                    f.write(image.read())
 
+                st.info("📤 Uploading image to Google Drive...")
+                image_path = upload_to_drive(temp_path, image.name)
+                st.success("✅ Image uploaded successfully!")
+                os.remove(temp_path)
+            else:
+                image_path = ""
 
             ref_code = str(uuid.uuid4())[:8].upper()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -318,33 +288,20 @@ elif page == "Submit Report":
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
 
-                # --- Success Card ---
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color: #E8F5E9;
-                        border-left: 5px solid #008080;
-                        border-radius: 12px;
-                        padding: 20px;
-                        margin-top: 30px;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                    ">
+                st.markdown(f"""
+                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
+                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                         <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
                         <p><b>Reference Code:</b> {ref_code}</p>
                         <p><b>Date & Time:</b> {timestamp}</p>
                         <p><b>Confirmation sent to:</b> {contact}</p>
-                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track the progress of your report.</p>
+                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
                     </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
+                """, unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 # ---------------------- CHECK STATUS ----------------------
 elif page == "Check Status":
@@ -364,7 +321,7 @@ elif page == "Check Status":
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
                 image_path = match.get("ImageURL", "")
-                if image_path and os.path.exists(image_path):
+                if image_path:
                     st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
@@ -372,4 +329,5 @@ elif page == "Check Status":
                 st.warning("Reference code not found.")
         except Exception as e:
             st.error(f"Could not check status: {e}")
+
     st.markdown("</div>", unsafe_allow_html=True)
