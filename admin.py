@@ -198,20 +198,12 @@ def home_page(df):
         st.warning("No reports found yet.")
         return
 
-    # --- Time-based greeting ---
-    hour = datetime.now().hour
-    if hour < 12:
-        greeting = "Good morning"
-    elif hour < 17:
-        greeting = "Good afternoon"
-    else:
-        greeting = "Good evening"
-
-    # --- Banner with background image ---
+    # --- Display Banner ---
     banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
     display_banner(
         banner_image_path,
-        f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
+        st.session_state.admin_name,
+        st.session_state.admin_municipality
     )
 
     # --- Metrics calculations ---
@@ -244,7 +236,9 @@ def home_page(df):
     if pending_reports > 0:
         for i in range(pending_reports + 1):
             placeholder_pending.markdown(
-                f"<div class='pulse-box'>⚠ Pending Reports: {i}</div>", unsafe_allow_html=True
+                f"<div style='background-color:#ffcccc;color:#a80000;padding:10px 15px;"
+                f"border-radius:10px;text-align:center;font-weight:bold;font-size:18px;'>⚠ Pending Reports: {i}</div>",
+                unsafe_allow_html=True
             )
             time.sleep(0.02)
     else:
