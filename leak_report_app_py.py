@@ -175,8 +175,8 @@ def save_image_locally(image):
 import base64
 from pathlib import Path
 
-# --- Read query params to control page ---
-page = st.query_params.get("page", ["Home"])[0]  # Default to Home
+# --- Sidebar navigation handles pages ---
+# page = st.sidebar.radio("Navigate", ["Home", "Submit Report", "Check Status"], index=0)
 
 if page == "Home":
     # --- Banner Image ---
@@ -242,12 +242,11 @@ if page == "Home":
             </h3>
             <ol style="font-size:1.1rem; line-height:1.8; padding-left:25px;">
                 <li>Go to the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
-                <li>Receive a unique <b>Reference Code</b> via email for tracking your report.</li>
+                <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
                 <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
             </ol>
         </div>
     """, unsafe_allow_html=True)
-
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
