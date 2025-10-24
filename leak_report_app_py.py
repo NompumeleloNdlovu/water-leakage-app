@@ -11,6 +11,10 @@ from pathlib import Path
 from email.message import EmailMessage
 import smtplib
 import base64
+import folium
+from streamlit_folium import st_folium
+   
+
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -225,14 +229,7 @@ else:
 
  
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-elif page == "Submit Report":
-    import folium
-    from streamlit_folium import st_folium
-    from pathlib import Path
-    import base64
-    import uuid
-    from datetime import datetime
-    import os
+    elif page == "Submit Report":
 
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
