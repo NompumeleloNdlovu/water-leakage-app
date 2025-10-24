@@ -188,7 +188,6 @@ if page == "Home":
     
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-# ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
     import folium
     from streamlit_folium import st_folium
@@ -233,36 +232,48 @@ elif page == "Submit Report":
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
         location_address = st.text_input("Address of Leak (optional if using map)")
-        
+
         st.markdown("**Or select location on map:**")
         # Default map center (South Africa)
         default_lat, default_lon = -30.5595, 22.9375
         m = folium.Map(location=[default_lat, default_lon], zoom_start=5)
-        
+
         # --- Draggable Marker ---
         marker = folium.Marker(
             location=[default_lat, default_lon],
             draggable=True,
-            popup="Drag to select location"
+            popup="Drag or click on the map to select location"
         )
         marker.add_to(m)
 
+        # Display the map and get click/drag info
         map_data = st_folium(m, height=300, width=700)
-        
-        # Capture coordinates from map if user moved marker
-        if map_data and map_data.get("last_clicked"):
-            latitude = map_data["last_clicked"]["lat"]
-            longitude = map_data["last_clicked"]["lng"]
-        else:
-            latitude = None
-            longitude = None
+
+        # --- Capture coordinates ---
+        latitude, longitude = None, None
+        if map_data:
+            # If user clicked map
+            if map_data.get("last_clicked"):
+                latitude = map_data["last_clicked"]["lat"]
+                longitude = map_data["last_clicked"]["lng"]
+            # If marker moved
+            elif map_data.get("last_object_clicked"):
+                obj = map_data["last_object_clicked"]
+                latitude = obj["lat"]
+                longitude = obj["lng"]
+
+        # --- Automatically populate Location field ---
+        if latitude and longitude:
+            location_address = f"{latitude:.6f}, {longitude:.6f}"
+            # Display the coordinates in the Location input
+            st.text_input("Selected Location", value=location_address, disabled=True)
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit_clicked:
-        if not name or not contact or (not location_address and not (latitude and longitude)):
+        if not name or not contact or (not location_address):
             st.error("Please provide your name, email, and either an address or select a location on the map.")
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
@@ -298,7 +309,6 @@ elif page == "Submit Report":
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
 
-                # --- Updated success message color ---
                 st.markdown(f"""
                     <div style="background-color:#2e7d32;border-left:5px solid #008080;
                                 border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
@@ -313,6 +323,7 @@ elif page == "Submit Report":
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ---------------------- CHECK STATUS PAGE ----------------------
