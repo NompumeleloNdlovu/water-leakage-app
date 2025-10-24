@@ -211,14 +211,14 @@ if page == "Home":
     else:
         st.warning("⚠ Banner image not found. Please check the file path.")
 
-    # --- Softer Modern Info Card with Hover Effects ---
+    # --- White Smoke Info Card with Hover Effects ---
     st.markdown("""
         <div style="
             max-width: 900px;
             margin: 0 auto 60px auto;
             padding: 50px;
             border-radius: 25px;
-            background: linear-gradient(145deg, #eef2f5, #ffffff);
+            background-color: #F5F5F5;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             font-family: 'Poppins', sans-serif;
             color: #2c2c2c;
@@ -229,7 +229,7 @@ if page == "Home":
             <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
                 directly to their local municipalities. Users can provide details, upload images, specify exact locations,
-                and monitor repair progress, all in one place.
+                and monitor repair progress — all in one place.
             </p>
             <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Every report helps conserve water and strengthens our infrastructure. Together, we can save every drop.
@@ -243,7 +243,7 @@ if page == "Home":
                     margin-bottom: 8px; 
                     border-radius: 10px;
                     transition: all 0.3s ease; 
-                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                " onmouseover="this.style.background='#e0e0e0'; this.style.transform='scale(1.03)';" 
                    onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
                     Open the <b>Submit Report</b> page and provide leak details, including location and photos.
                 </li>
@@ -252,7 +252,7 @@ if page == "Home":
                     margin-bottom: 8px; 
                     border-radius: 10px;
                     transition: all 0.3s ease; 
-                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                " onmouseover="this.style.background='#e0e0e0'; this.style.transform='scale(1.03)';" 
                    onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
                     Receive a unique <b>Reference Code</b> via email for tracking.
                 </li>
@@ -261,7 +261,7 @@ if page == "Home":
                     margin-bottom: 8px; 
                     border-radius: 10px;
                     transition: all 0.3s ease; 
-                " onmouseover="this.style.background='#dce6f2'; this.style.transform='scale(1.03)';" 
+                " onmouseover="this.style.background='#e0e0e0'; this.style.transform='scale(1.03)';" 
                    onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
                     Visit the <b>Check Status</b> page to monitor the repair progress in real time.
                 </li>
