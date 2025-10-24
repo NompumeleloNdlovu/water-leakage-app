@@ -172,7 +172,7 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-
+    # --- Banner for Home Page ---
     banner_path = Path("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
     if banner_path.exists():
         with open(banner_path, "rb") as f:
@@ -207,19 +207,39 @@ if page == "Home":
         """, unsafe_allow_html=True)
     else:
         st.warning("⚠ Banner image not found. Please check the file path.")
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.title("Welcome to Drop Watch SA")
-        st.markdown(
-            "This platform enables citizens to report water leaks directly to their municipalities "
-            "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
-        )
-        st.markdown("### How It Works:")
-        st.markdown("""
-        1. Open **Submit Report** and fill in leak details.  
-        2. Receive a **Reference Code** via email.  
-        3. Use **Check Status** to monitor the repair progress.
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Welcome Info Section ---
+    st.markdown(
+        """
+        <div style="
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+            font-family: 'Poppins', sans-serif;
+        ">
+            <h2 style="color:#004aad;">Welcome to Drop Watch SA</h2>
+            <p>
+                Drop Watch SA is a citizen-driven water leakage reporting platform that helps connect communities
+                with their local municipalities. The app allows users to report water leaks, provide photos and
+                location details, and track repair progress — helping conserve water and support sustainable water
+                management in South Africa.
+            </p>
+
+            <h3 style="color:#004aad;">How It Works</h3>
+            <ol>
+                <li>Go to the <b>Submit Report</b> section and provide leak details, including location and photos.</li>
+                <li>Receive a <b>Reference Code</b> for tracking your report.</li>
+                <li>Use the <b>Check Status</b> page to monitor repair progress in real time.</li>
+            </ol>
+
+            <p>
+                Together, we can make a difference by saving every drop. Start by submitting your first report today.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
