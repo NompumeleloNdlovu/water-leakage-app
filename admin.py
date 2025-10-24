@@ -470,7 +470,7 @@ def manage_reports_page(df, sheet):
     for idx, row in df_admin.iterrows():
         with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
 
-            # --- Status color ---
+            # Color based on status
             status = row.get("Status", "Pending")
             color = "#ffcccc" if status == "Pending" else "#ccffcc"
 
@@ -479,34 +479,34 @@ def manage_reports_page(df, sheet):
                 unsafe_allow_html=True
             )
 
-            # --- Report details table ---
+            # --- Report details ---
             display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
             st.write(display_row)
 
-            # --- LOCATION HANDLING (added feature) ---
-            lat = row.get("Latitude")
-            lon = row.get("Longitude")
+            # --- Location Map or Address ---
+            latitude = row.get("Latitude")
+            longitude = row.get("Longitude")
+            address = row.get("Location", "")
 
-            if pd.notna(lat) and pd.notna(lon):
-                st.markdown(f"**📍 Map Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
-
-                try:
-                    m = folium.Map(location=[lat, lon], zoom_start=16)
-                    folium.Marker([lat, lon], tooltip="Reported Leak Location").add_to(m)
-                    st_folium(m, height=250, width=600)
-                except Exception as e:
-                    st.warning(f"Map could not be displayed: {e}")
+            if latitude and longitude:
+                st.markdown(f"📍 Location (from map):** [Open in Google Maps](https://www.google.com/maps?q={latitude},{longitude})")
+                m = folium.Map(location=[latitude, longitude], zoom_start=16)
+                folium.Marker([latitude, longitude], tooltip="Reported Leak").add_to(m)
+                st_folium(m, height=250, width=600)
+            elif address:
+                st.markdown(f"📍 Location:** {address}")
+            else:
+                st.markdown("📍 Location:** No location data provided.")
 
             # --- Status update ---
             options = ["Pending", "Resolved"]
             if status not in options:
                 status = "Pending"
-
             new_status = st.selectbox("Update Status", options, index=options.index(status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
                     cell = sheet.find(str(row[report_id_col]))
-                    sheet.update_cell(cell.row, df.columns.get_loc("Status") + 1, new_status)
+                    sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
                     st.success(f"Status updated to {new_status}")
                     df.at[idx, "Status"] = new_status
                 except Exception as e:
@@ -515,8 +515,6 @@ def manage_reports_page(df, sheet):
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
