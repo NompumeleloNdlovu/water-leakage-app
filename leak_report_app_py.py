@@ -175,8 +175,9 @@ def save_image_locally(image):
 import base64
 from pathlib import Path
 
-# --- Read query params to control page ---
-page = st.query_params.get("page", ["Home"])[0]  # Default to Home
+# --- Determine page ---
+# Default to "Home" unless query param or sidebar selection exists
+page = st.query_params.get("page", ["Home"])[0]
 
 if page == "Home":
     # --- Banner Image ---
@@ -211,10 +212,8 @@ if page == "Home":
                 </div>
             </div>
         """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠ Banner image not found. Please check the file path.")
 
-    # --- Modern "How It Works" Card ---
+    # --- How It Works Card ---
     st.markdown("""
         <div style="
             max-width: 900px;
@@ -249,9 +248,11 @@ if page == "Home":
     # --- Get Started Button ---
     st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
     if st.button("Get Started"):
-        st.set_query_params(page="Submit Report")  # Updated method
-        st.experimental_rerun()  # Reload app to show Submit Report page
+        # Use set_query_params but do NOT rerun immediately
+        st.set_query_params(page="Submit Report")
+        # Instead of st.experimental_rerun, rely on sidebar selection to handle page change
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
