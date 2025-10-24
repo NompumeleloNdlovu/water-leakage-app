@@ -438,7 +438,6 @@ def manage_reports_page(df, sheet):
         st.warning("Please log in to view this page.")
         return
 
-    # Full-page background with semi-transparent overlay
     st.markdown(
         """
         <div style="
@@ -479,24 +478,17 @@ def manage_reports_page(df, sheet):
                 unsafe_allow_html=True
             )
 
-            # --- Report details ---
+            # --- Report details (excluding image) ---
             display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
             st.write(display_row)
 
-            # --- Location Map or Address ---
-            latitude = row.get("Latitude")
-            longitude = row.get("Longitude")
-            address = row.get("Location", "")
-
-            if latitude and longitude:
-                st.markdown(f"📍 Location (from map):** [Open in Google Maps](https://www.google.com/maps?q={latitude},{longitude})")
-                m = folium.Map(location=[latitude, longitude], zoom_start=16)
-                folium.Marker([latitude, longitude], tooltip="Reported Leak").add_to(m)
-                st_folium(m, height=250, width=600)
-            elif address:
-                st.markdown(f"📍 Location:** {address}")
-            else:
-                st.markdown("📍 Location:** No location data provided.")
+            # --- Show map if coordinates exist ---
+            lat, lon = row.get("Latitude"), row.get("Longitude")
+            if lat and lon:
+                st.markdown("*Location Map:*")
+                m = folium.Map(location=[lat, lon], zoom_start=16)
+                folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
+                st_folium(m, height=300, width=600)
 
             # --- Status update ---
             options = ["Pending", "Resolved"]
