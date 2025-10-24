@@ -175,6 +175,7 @@ def save_image_locally(image):
 if page == "Home":
     from pathlib import Path
     import base64
+    import streamlit as st
 
     # --- Banner Image ---
     banner_path = Path("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
@@ -247,11 +248,18 @@ if page == "Home":
         """, unsafe_allow_html=True
     )
 
-    # --- Get Started Button ---
-    if st.button("Get Started", key="home_get_started"):
-        # Navigate to Submit Report page
-        page = "Submit Report"
+    # --- Functional Get Started Button ---
+    if "page" not in st.session_state:
+        st.session_state.page = page
 
+    if st.button("Get Started", key="home_get_started"):
+        # Set session state to navigate
+        st.session_state.page = "Submit Report"
+        # Optionally force rerun to update sidebar
+        st.experimental_rerun()
+
+    # Close welcome card div
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
