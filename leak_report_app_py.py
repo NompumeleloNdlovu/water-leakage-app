@@ -230,6 +230,11 @@ elif page == "Submit Report":
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
         location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+        
+        # --- Geo-tagging inputs ---
+        latitude = st.text_input("Latitude (optional)", placeholder="-26.2041")
+        longitude = st.text_input("Longitude (optional)", placeholder="28.0473")
+        
         image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
@@ -238,7 +243,7 @@ elif page == "Submit Report":
 
     if submit_clicked:
         if not name or not contact or not location:
-            st.error("All fields are required.")
+            st.error("All required fields must be filled (Name, Email, Location).")
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
@@ -263,6 +268,8 @@ elif page == "Submit Report":
                 "Location": location,
                 "DateTime": timestamp,
                 "ImageURL": image_path,
+                "Latitude": latitude,
+                "Longitude": longitude,
                 "Status": "Pending"
             }
 
@@ -285,6 +292,7 @@ elif page == "Submit Report":
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # ---------------------- CHECK STATUS PAGE ----------------------
 if page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -293,7 +301,7 @@ if page == "Check Status":
 
     if st.button("Check Status", use_container_width=True):
         try:
-            client = get_gsheet_client()  # or your database client
+            client = get_gsheet_client()
             sheet = client.open_by_key(SPREADSHEET_ID).sheet1
             records = sheet.get_all_records()
             match = next((row for row in records if row["Reference"] == user_ref), None)
@@ -302,12 +310,21 @@ if page == "Check Status":
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
 
+                # --- Display location on map ---
+                lat, lon = match.get("Latitude"), match.get("Longitude")
+                if lat and lon:
+                    try:
+                        st.map(pd.DataFrame([[float(lat), float(lon)]], columns=["lat", "lon"]))
+                    except:
+                        st.info("Invalid coordinates provided for this report.")
+
                 # Display image if exists
                 image_path = match.get("ImageURL", "")
                 if image_path and os.path.exists(image_path):
                     st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
+
             else:
                 st.warning("Reference code not found.")
 
@@ -315,4 +332,3 @@ if page == "Check Status":
             st.error(f"Could not check status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
