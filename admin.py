@@ -425,7 +425,6 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
-import os
 import streamlit as st
 
 def manage_reports_page(df, sheet):
@@ -474,27 +473,6 @@ def manage_reports_page(df, sheet):
                 unsafe_allow_html=True
             )
 
-            # --- Image first ---
-            image_file = row.get("Image")
-            image_url = row.get("ImageURL")
-            image_displayed = False
-
-            if image_file:
-                local_path = os.path.join("leak_images", image_file)
-                if os.path.exists(local_path):
-                    st.image(local_path, caption=f"Report #{row[report_id_col]}", use_column_width=True)
-                    image_displayed = True
-
-            if not image_displayed and image_url and isinstance(image_url, str) and image_url.strip():
-                st.markdown(
-                    f'<a href="{image_url}" target="_blank">View Uploaded Image</a>',
-                    unsafe_allow_html=True
-                )
-                image_displayed = True
-
-            if not image_displayed:
-                st.markdown("_No image uploaded or file not found._", unsafe_allow_html=True)
-
             # --- Report details ---
             display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
             st.write(display_row)
@@ -516,6 +494,7 @@ def manage_reports_page(df, sheet):
             st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
