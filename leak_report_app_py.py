@@ -170,7 +170,45 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    set_main_background("images/images/fresh-water-texture-background-transparent-liquid.jpg")
+ from pathlib import Path
+import base64
+import streamlit as st
+
+# --- Banner for Submit Report Page ---
+banner_path = Path("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
+if banner_path.exists():
+    with open(banner_path, "rb") as f:
+        banner_base64 = base64.b64encode(f.read()).decode()
+    
+    st.markdown(f"""
+    <div style="
+        position: relative;
+        width: 100%;
+        height: 180px;
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 25px;
+    ">
+        <img src="data:image/jpg;base64,{banner_base64}" 
+             style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+        <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            font-family: 'Poppins', sans-serif;
+        ">
+            Report a Water Leak
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.warning("⚠ Banner image not found. Please check the file path.")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.title("Welcome to Drop Watch SA")
     st.markdown(
