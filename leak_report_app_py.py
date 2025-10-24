@@ -158,23 +158,6 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------- HOME PAGE ----------------------
-if page == "Home":
-    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.title("Welcome to Drop Watch SA")
-    st.markdown(
-        "This platform enables citizens to report water leaks directly to their municipalities "
-        "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
-    )
-    st.markdown("### How It Works:")
-    st.markdown("""
-    1. Open **Submit Report** and fill in leak details.  
-    2. Receive a **Reference Code** via email.  
-    3. Use **Check Status** to monitor the repair progress.
-    """)
-    st.markdown("</div>", unsafe_allow_html=True)
-
 # ---------------------- GOOGLE DRIVE UPLOAD ----------------------
 def upload_to_drive(file_path, file_name):
     creds = Credentials.from_service_account_info(
@@ -200,6 +183,24 @@ def upload_to_drive(file_path, file_name):
     ).execute()
 
     return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
+
+
+# ---------------------- HOME PAGE ----------------------
+if page == "Home":
+    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.title("Welcome to Drop Watch SA")
+    st.markdown(
+        "This platform enables citizens to report water leaks directly to their municipalities "
+        "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
+    )
+    st.markdown("### How It Works:")
+    st.markdown("""
+    1. Open **Submit Report** and fill in leak details.  
+    2. Receive a **Reference Code** via email.  
+    3. Use **Check Status** to monitor the repair progress.
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     
 # ---------------------- SUBMIT REPORT PAGE ----------------------
