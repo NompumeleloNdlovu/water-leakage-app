@@ -229,7 +229,7 @@ else:
 
  
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-    elif page == "Submit Report":
+elif page == "Submit Report":
 
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
