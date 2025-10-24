@@ -158,7 +158,15 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 </style>
 """, unsafe_allow_html=True)
 
-
+# ---------------------- LOCAL IMAGE UPLOAD ----------------------
+def save_image_locally(image):
+    """Saves the uploaded image locally and returns the file path."""
+    os.makedirs("leak_images", exist_ok=True)
+    image_filename = f"{uuid.uuid4()}_{image.name}"
+    image_path = os.path.join("leak_images", image_filename)
+    with open(image_path, "wb") as f:
+        f.write(image.read())
+    return image_path
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
@@ -178,15 +186,7 @@ if page == "Home":
     st.markdown("</div>", unsafe_allow_html=True)
 
     
-# ---------------------- LOCAL IMAGE UPLOAD ----------------------
-def save_image_locally(image):
-    """Saves the uploaded image locally and returns the file path."""
-    os.makedirs("leak_images", exist_ok=True)
-    image_filename = f"{uuid.uuid4()}_{image.name}"
-    image_path = os.path.join("leak_images", image_filename)
-    with open(image_path, "wb") as f:
-        f.write(image.read())
-    return image_path
+
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
