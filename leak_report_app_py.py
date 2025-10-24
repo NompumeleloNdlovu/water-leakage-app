@@ -170,7 +170,7 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    set_main_background("images/images/fresh-water-texture-background-transparent-liquid.jpg")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.title("Welcome to Drop Watch SA")
     st.markdown(
