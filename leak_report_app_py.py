@@ -175,7 +175,6 @@ def save_image_locally(image):
 if page == "Home":
     from pathlib import Path
     import base64
-    import streamlit as st
 
     # --- Banner Image ---
     banner_path = Path("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
@@ -213,8 +212,7 @@ if page == "Home":
         st.warning("⚠ Banner image not found. Please check the file path.")
 
     # --- Welcome Card ---
-    st.markdown(
-        """
+    st.markdown("""
         <div style="
             background: rgba(255,255,255,0.88);
             backdrop-filter: blur(6px);
@@ -234,7 +232,6 @@ if page == "Home":
             <p style="font-size:1.05rem; line-height:1.7; text-align:justify;">
                 Every report helps conserve water and strengthens our infrastructure. Help us save every drop.
             </p>
-
             <div style="margin-top:25px;">
                 <h3 style="color:#004aad;">How It Works</h3>
                 <ol>
@@ -243,23 +240,17 @@ if page == "Home":
                     <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
                 </ol>
             </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-            <div style="text-align:center; margin-top:30px;">
-        """, unsafe_allow_html=True
-    )
-
-    # --- Functional Get Started Button ---
-    if "page" not in st.session_state:
-        st.session_state.page = page
-
+    # --- Get Started Button ---
+    st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
     if st.button("Get Started", key="home_get_started"):
-        # Set session state to navigate
+        # Update session state to navigate to Submit Report
         st.session_state.page = "Submit Report"
-        # Optionally force rerun to update sidebar
         st.experimental_rerun()
-
-    # Close welcome card div
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
