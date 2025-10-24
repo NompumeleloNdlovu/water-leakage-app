@@ -175,9 +175,8 @@ def save_image_locally(image):
 import base64
 from pathlib import Path
 
-# --- Determine page ---
-# Default to "Home" unless query param or sidebar selection exists
-page = st.query_params.get("page", ["Home"])[0]
+# --- Read query params to control page ---
+page = st.query_params.get("page", ["Home"])[0]  # Default to Home
 
 if page == "Home":
     # --- Banner Image ---
@@ -189,70 +188,65 @@ if page == "Home":
             <div style="
                 position: relative;
                 width: 100%;
-                height: 250px;
+                height: 300px;
                 overflow: hidden;
-                border-radius: 0 0 20px 20px;
-                margin-bottom: 40px;
+                border-radius: 0 0 30px 30px;
+                margin-bottom: 50px;
             ">
                 <img src="data:image/jpg;base64,{banner_base64}" 
-                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.6);">
                 <div style="
                     position: absolute;
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
                     color: white;
-                    font-size: 36px;
-                    font-weight: bold;
+                    font-size: 42px;
+                    font-weight: 800;
                     text-align: center;
-                    text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+                    text-shadow: 2px 2px 12px rgba(0,0,0,0.7);
                     font-family: 'Poppins', sans-serif;
                 ">
                     Drop Watch SA
                 </div>
             </div>
         """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠ Banner image not found. Please check the file path.")
 
-    # --- How It Works Card ---
+    # --- Modern Info Card ---
     st.markdown("""
         <div style="
-            max-width: 900px;
-            margin: 0 auto 40px auto;
-            padding: 40px;
-            border-radius: 20px;
-            background: linear-gradient(145deg, #ffffff, #f0f8ff);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            max-width: 950px;
+            margin: 0 auto 60px auto;
+            padding: 50px;
+            border-radius: 25px;
+            background: linear-gradient(145deg, #f0f8ff, #ffffff);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             font-family: 'Poppins', sans-serif;
             color: #1a1a1a;
         ">
-            <h2 style="color:#004aad; font-size:2.2rem; font-weight:700; text-align:center; margin-bottom:25px;">
+            <h2 style="color:#004aad; font-size:2.4rem; font-weight:800; text-align:center; margin-bottom:30px;">
                 Welcome to Drop Watch SA
             </h2>
-            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
+            <p style="font-size:1.15rem; line-height:1.9; text-align:justify;">
                 Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
-                directly to their local municipalities. Report leaks, upload images, provide exact locations,
-                and track repair progress — all in one place.
+                directly to their local municipalities. Users can provide details, upload images, specify exact locations,
+                and monitor repair progress — all in one place.
             </p>
-            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
-                Every report helps conserve water and strengthens our infrastructure. Help us save every drop.
+            <p style="font-size:1.15rem; line-height:1.9; text-align:justify;">
+                Every report helps conserve water and strengthens our infrastructure. Together, we can save every drop.
             </p>
-            <h3 style="color:#004aad; font-size:1.6rem; margin-top:30px;">How It Works</h3>
-            <ol style="font-size:1.05rem; line-height:1.7; margin-left:20px;">
-                <li>Open the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
-                <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
+            <h3 style="color:#004aad; font-size:1.8rem; margin-top:40px; margin-bottom:15px; text-align:center;">
+                How It Works
+            </h3>
+            <ol style="font-size:1.1rem; line-height:1.8; padding-left:25px;">
+                <li>Go to the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
+                <li>Receive a unique <b>Reference Code</b> via email for tracking your report.</li>
                 <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
             </ol>
         </div>
     """, unsafe_allow_html=True)
-
-    # --- Get Started Button ---
-    st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
-    if st.button("Get Started"):
-        # Use set_query_params but do NOT rerun immediately
-        st.set_query_params(page="Submit Report")
-        # Instead of st.experimental_rerun, rely on sidebar selection to handle page change
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 
 
