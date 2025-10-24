@@ -198,6 +198,7 @@ def home_page(df):
         st.warning("No reports found yet.")
         return
 
+    # --- Time-based greeting ---
     hour = datetime.now().hour
     if hour < 12:
         greeting = "Good morning"
@@ -206,19 +207,24 @@ def home_page(df):
     else:
         greeting = "Good evening"
 
+    # --- Banner with background image ---
     banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
     display_banner(
         banner_image_path,
         f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
     )
 
+    # --- Metrics calculations ---
     df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
     pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
+
+    # Reports since last login
     reports_at_login = st.session_state.get("reports_at_login", total_reports)
     new_reports = max(total_reports - reports_at_login, 0)
 
+    # --- Live Counters using Streamlit ---
     col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
@@ -233,7 +239,7 @@ def home_page(df):
         placeholder_resolved.metric("Resolved Reports", i)
         time.sleep(0.02)
 
-    # Pending Reports
+    # Pending Reports with pulse if >0
     placeholder_pending = col3.empty()
     if pending_reports > 0:
         for i in range(pending_reports + 1):
@@ -249,6 +255,24 @@ def home_page(df):
     for i in range(new_reports + 1):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
+
+# --- CSS for pulse-box (keep once in your main file, outside functions) ---
+st.markdown(
+    """
+    <style>
+    .pulse-box {
+        background-color: #ffcccc;
+        color: #a80000;
+        padding: 10px 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ------------------ MUNICIPAL OVERVIEW PAGE ------------------
 def municipal_overview_page(df):
