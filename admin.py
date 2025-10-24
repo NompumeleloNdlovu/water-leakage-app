@@ -151,6 +151,58 @@ import streamlit as st
 from datetime import datetime, timedelta
 import time
 import base64
+def display_banner(image_path, title_text):
+    """
+    Display a banner with overlay text at the top of a page.
+    """
+    if not os.path.exists(image_path):
+        st.warning("Banner image not found.")
+        return
+
+    banner_base64 = get_base64_image(image_path)
+    st.markdown(
+        f"""
+        <style>
+        .banner {{
+            position: relative;
+            background-image: url("data:image/jpg;base64,{banner_base64}");
+            background-size: cover;
+            background-position: center;
+            height: 200px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            margin-bottom: 20px;
+        }}
+        .overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+        }}
+        .banner-text {{
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }}
+        </style>
+
+        <div class="banner">
+            <div class="overlay"></div>
+            <div class="banner-text">{title_text}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
@@ -172,6 +224,8 @@ def home_page(df):
 
     # --- Banner with background image ---
     banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+    display_banner(banner_image_path, f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal")
+
     banner_base64 = get_base64_image(banner_image_path)
 
     st.markdown(
