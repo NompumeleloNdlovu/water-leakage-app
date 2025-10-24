@@ -499,10 +499,12 @@ def send_reference_email(to_email, ref_code, name, resolved=False):
     msg["To"] = to_email
     msg.set_content(content)
 
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-            smtp.login(smtp_user, smtp_password)
-            smtp.send_message(msg)
-    except Exception as e:
-        st.error(f"Email failed: {e}")
-   =True)
+   try:
+    with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(msg)
+except Exception as e:
+    st.error(f"Email failed: {e}")
+
+
+
