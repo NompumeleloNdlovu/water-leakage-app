@@ -173,30 +173,84 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    set_main_background("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
+    from pathlib import Path
+    import base64
 
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    # --- Banner Image ---
+    banner_path = Path("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            banner_base64 = base64.b64encode(f.read()).decode()
+        st.markdown(f"""
+            <div style="
+                position: relative;
+                width: 100%;
+                height: 250px;
+                overflow: hidden;
+                border-radius: 0 0 20px 20px;
+                margin-bottom: 40px;
+            ">
+                <img src="data:image/jpg;base64,{banner_base64}" 
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                <div style="
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: white;
+                    font-size: 36px;
+                    font-weight: bold;
+                    text-align: center;
+                    text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+                    font-family: 'Poppins', sans-serif;
+                ">
+                    Drop Watch SA
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠ Banner image not found. Please check the file path.")
 
-    st.title("Welcome to Drop Watch SA")
-
+    # --- Welcome Card ---
     st.markdown(
         """
-        This platform enables citizens to report water leaks directly to their municipalities
-        and track progress until resolution. Your reports help save water and strengthen
-        community infrastructure.
-        """
+        <div style="
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(6px);
+            border-radius: 18px;
+            padding: 36px 32px;
+            max-width: 900px;
+            margin: 0 auto 48px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            font-family: 'Poppins', sans-serif;
+            color: #1e1e1e;
+        ">
+            <p style="font-size:1.05rem; line-height:1.7; text-align:justify;">
+                Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
+                directly to their local municipalities. Report leaks, upload images, provide exact locations,
+                and track repair progress — all in one place.
+            </p>
+            <p style="font-size:1.05rem; line-height:1.7; text-align:justify;">
+                Every report helps conserve water and strengthens our infrastructure. Help us save every drop.
+            </p>
+
+            <div style="margin-top:25px;">
+                <h3 style="color:#004aad;">How It Works</h3>
+                <ol>
+                    <li>Open the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
+                    <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
+                    <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
+                </ol>
+            </div>
+
+            <div style="text-align:center; margin-top:30px;">
+        """, unsafe_allow_html=True
     )
 
-    st.markdown("### How It Works:")
-    st.markdown(
-        """
-        1. Open **Submit Report** and fill in leak details.  
-        2. Receive a **Reference Code** via email.  
-        3. Use **Check Status** to monitor the repair progress.
-        """
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    # --- Get Started Button ---
+    if st.button("Get Started", key="home_get_started"):
+        # Navigate to Submit Report page
+        page = "Submit Report"
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
