@@ -193,7 +193,6 @@ def display_banner(image_path, title_text):
         unsafe_allow_html=True
     )
 
-
 def home_page(df):
     if df.empty:
         st.warning("No reports found yet.")
@@ -210,11 +209,62 @@ def home_page(df):
 
     # --- Banner with background image ---
     banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
-    title_text = f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
-    
-    display_banner(banner_image_path, title_text)
+    banner_base64 = get_base64_image(banner_image_path)
 
+    st.markdown(
+        f"""
+        <style>
+        .banner {{
+            position: relative;
+            background-image: url("data:image/jpg;base64,{banner_base64}");
+            background-size: cover;
+            background-position: center;
+            height: 250px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            margin-bottom: 20px;
+        }}
+        .overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+        }}
+        .banner-text {{
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }}
+        .pulse-box {{
+            background-color: #ffcccc;
+            color: #a80000;
+            padding: 10px 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }}
+        </style>
 
+        <div class="banner">
+            <div class="overlay"></div>
+            <div class="banner-text">
+                {greeting}, {st.session_state.admin_name}!<br>
+                Welcome to the {st.session_state.admin_municipality} Admin Portal
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # --- Metrics calculations ---
     df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
@@ -246,9 +296,7 @@ def home_page(df):
     if pending_reports > 0:
         for i in range(pending_reports + 1):
             placeholder_pending.markdown(
-                f"<div style='background-color:#ffcccc;color:#a80000;padding:10px 15px;"
-                f"border-radius:10px;text-align:center;font-weight:bold;font-size:18px;'>⚠ Pending Reports: {i}</div>",
-                unsafe_allow_html=True
+                f"<div class='pulse-box'>⚠️ Pending Reports: {i}</div>", unsafe_allow_html=True
             )
             time.sleep(0.02)
     else:
@@ -259,6 +307,8 @@ def home_page(df):
     for i in range(new_reports + 1):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
+
+
 
 # ------------------ MUNICIPAL OVERVIEW PAGE ------------------
 def municipal_overview_page(df):
