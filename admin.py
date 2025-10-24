@@ -292,26 +292,26 @@ resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df
 pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
 
     # Reports since last login
-    reports_at_login = st.session_state.get("reports_at_login", total_reports)
-    new_reports = max(total_reports - reports_at_login, 0)
+reports_at_login = st.session_state.get("reports_at_login", total_reports)
+new_reports = max(total_reports - reports_at_login, 0)
 
     # --- Live Counters using Streamlit ---
-    col1, col2, col3, col4 = st.columns(4)
+ col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
-    placeholder_total = col1.empty()
+  placeholder_total = col1.empty()
     for i in range(total_reports + 1):
         placeholder_total.metric("Total Reports", i)
         time.sleep(0.02)
 
     # Resolved Reports
-    placeholder_resolved = col2.empty()
+ placeholder_resolved = col2.empty()
     for i in range(resolved_reports + 1):
         placeholder_resolved.metric("Resolved Reports", i)
         time.sleep(0.02)
 
     # Pending Reports with pulse if >0
-    placeholder_pending = col3.empty()
+ placeholder_pending = col3.empty()
     if pending_reports > 0:
         for i in range(pending_reports + 1):
             placeholder_pending.markdown(
@@ -322,7 +322,7 @@ pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_f
         placeholder_pending.metric("Pending Reports", 0)
 
     # New Reports since last login
-    placeholder_new = col4.empty()
+ placeholder_new = col4.empty()
     for i in range(new_reports + 1):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
