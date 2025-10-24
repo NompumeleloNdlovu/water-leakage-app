@@ -169,80 +169,80 @@ def save_image_locally(image):
     with open(image_path, "wb") as f:
         f.write(image.read())
     return image_path
+    
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    # --- Banner for Home Page ---
-    banner_path = Path("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
-    if banner_path.exists():
-        with open(banner_path, "rb") as f:
-            banner_base64 = base64.b64encode(f.read()).decode()
+    # Set the custom background
+    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
-        st.markdown(f"""
-        <div style="
-            position: relative;
-            width: 100%;
-            height: 180px;
-            border-radius: 20px;
-            overflow: hidden;
-            margin-bottom: 25px;
-        ">
-            <img src="data:image/jpg;base64,{banner_base64}" 
-                 style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-            <div style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: white;
-                font-size: 36px;
-                font-weight: bold;
-                text-align: center;
-                text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
-                font-family: 'Poppins', sans-serif;
-                letter-spacing: 1px;
-            ">
-                Drop Watch SA
+    # Modern styling
+    st.markdown("""
+        <style>
+        .home-container {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 18px;
+            padding: 40px 35px;
+            max-width: 850px;
+            margin: 60px auto;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            font-family: 'Poppins', sans-serif;
+            color: #1e1e1e;
+        }
+        .home-container h1 {
+            color: #004aad;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .home-container p {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            text-align: justify;
+            margin-bottom: 20px;
+        }
+        .how-it-works {
+            margin-top: 25px;
+        }
+        .how-it-works h3 {
+            color: #004aad;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        ol {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-left: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Home page content
+    st.markdown("""
+        <div class="home-container">
+            <h1>Welcome to Drop Watch SA</h1>
+            <p>
+                Drop Watch SA is a citizen-driven platform that empowers South Africans to take action
+                against water waste. Report water leaks, upload images, provide precise locations,
+                and track municipal repair progress — all in one place.
+            </p>
+            <p>
+                Together, we can conserve water and build stronger, more sustainable communities.
+            </p>
+
+            <div class="how-it-works">
+                <h3>How It Works</h3>
+                <ol>
+                    <li>Open the <b>Submit Report</b> page and share leak details, including location and photos.</li>
+                    <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
+                    <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
+                </ol>
             </div>
         </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠ Banner image not found. Please check the file path.")
-
-    # --- Welcome Info Section ---
-    st.markdown(
-        """
-        <div style="
-            background-color: #ffffff;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
-            font-family: 'Poppins', sans-serif;
-        ">
-            <h2 style="color:#004aad;">Welcome to Drop Watch SA</h2>
-            <p>
-                Drop Watch SA is a citizen-driven water leakage reporting platform that empowers communities
-                to take action against water waste. It allows users to report leaks, upload images, provide location
-                details, and track the progress of repairs — promoting responsible water management and collaboration
-                with local municipalities across South Africa.
-            </p>
-
-            <h3 style="color:#004aad;">How It Works</h3>
-            <ol>
-                <li>Go to the <b>Submit Report</b> section and provide leak details, including location and photos.</li>
-                <li>Receive a <b>Reference Code</b> for tracking your report.</li>
-                <li>Use the <b>Check Status</b> page to monitor repair progress in real time.</li>
-            </ol>
-
-            <p>
-                Together, we can make a difference — saving every drop for a sustainable future.
-                Start by submitting your first report today.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
+    """, unsafe_allow_html=True)
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
