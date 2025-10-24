@@ -12,6 +12,12 @@ from email.message import EmailMessage
 import smtplib
 import base64
 from pathlib import Path
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.oauth2.service_account import Credentials
+
+
+
  
 
 # ---------------------- COLORS ----------------------
@@ -170,6 +176,34 @@ if page == "Home":
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def upload_to_drive(file_path, file_name):
+    """Uploads an image to Google Drive and returns a public URL."""
+    creds = Credentials.from_service_account_info(
+        st.secrets["google_service_account"],
+        scopes=["https://www.googleapis.com/auth/drive"]
+    )
+    drive_service = build("drive", "v3", credentials=creds)
+
+    folder_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # your shared folder ID
+
+    file_metadata = {"name": file_name, "parents": [folder_id]}
+    media = MediaFileUpload(file_path, mimetype="image/jpeg")
+
+    uploaded_file = drive_service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id"
+    ).execute()
+
+    # Make file publicly viewable
+    drive_service.permissions().create(
+        fileId=uploaded_file.get("id"),
+        body={"role": "reader", "type": "anyone"}
+    ).execute()
+
+    file_url = f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
+    return file_url
+
 # ---------------------- SUBMIT REPORT PAGE ----------------------
   
 elif page == "Submit Report":
@@ -248,14 +282,22 @@ elif page == "Submit Report":
         else:
             image_path = ""
             if image:
-                os.makedirs("leak_images", exist_ok=True)
-                image_path = os.path.join(
-                    "leak_images",
-                    f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
-                )
-                with open(image_path, "wb") as f:
-                    f.write(image.read())
-                st.success("Image uploaded successfully.")
+             # Save temporarily before upload
+             temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
+             os.makedirs("temp", exist_ok=True)
+             with open(temp_path, "wb") as f:
+                 f.write(image.read())
+         
+             # Upload to Google Drive
+             st.info(" Uploading image to Google Drive...")
+             image_path = upload_to_drive(temp_path, image.name)
+             st.success("✅ Image uploaded successfully!")
+         
+             # Remove temporary file
+             os.remove(temp_path)
+         else:
+             image_path = ""
+
 
             ref_code = str(uuid.uuid4())[:8].upper()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
