@@ -169,10 +169,11 @@ if page == "Home":
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-elif page == "Submit Report":
-    import base64
+   import base64
     from pathlib import Path
-
+ 
+elif page == "Submit Report":
+ 
     # --- Banner (Admin homepage image) ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
