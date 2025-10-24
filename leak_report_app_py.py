@@ -173,76 +173,31 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    # Set background image
     set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
-    # --- Modern CSS styling ---
-    st.markdown("""
-        <style>
-        .home-container {
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(8px);
-            border-radius: 18px;
-            padding: 40px 35px;
-            max-width: 850px;
-            margin: 60px auto;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            font-family: 'Poppins', sans-serif;
-            color: #1e1e1e;
-        }
-        .home-container h1 {
-            color: #004aad;
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .home-container p {
-            font-size: 1.05rem;
-            line-height: 1.7;
-            text-align: justify;
-            margin-bottom: 20px;
-        }
-        .how-it-works {
-            margin-top: 25px;
-        }
-        .how-it-works h3 {
-            color: #004aad;
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-        ol {
-            font-size: 1.05rem;
-            line-height: 1.8;
-            margin-left: 20px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-    # --- Home Page Content ---
-    st.markdown("""
-        <div class="home-container">
-            <h1>Welcome to Drop Watch SA</h1>
-            <p>
-                Drop Watch SA is a citizen-driven platform that empowers South Africans to take action
-                against water waste. Report water leaks, upload images, provide precise locations,
-                and track municipal repair progress — all in one place.
-            </p>
-            <p>
-                Together, we can conserve water and build stronger, more sustainable communities.
-            </p>
+    st.title("Welcome to Drop Watch SA")
 
-            <div class="how-it-works">
-                <h3>How It Works</h3>
-                <ol>
-                    <li>Open the <b>Submit Report</b> page and share leak details, including location and photos.</li>
-                    <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
-                    <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
-                </ol>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        This platform enables citizens to report water leaks directly to their municipalities
+        and track progress until resolution. Your reports help save water and strengthen
+        community infrastructure.
+        """
+    )
+
+    st.markdown("### How It Works:")
+    st.markdown(
+        """
+        1. Open **Submit Report** and fill in leak details.  
+        2. Receive a **Reference Code** via email.  
+        3. Use **Check Status** to monitor the repair progress.
+        """
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
