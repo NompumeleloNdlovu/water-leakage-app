@@ -172,6 +172,11 @@ def save_image_locally(image):
     
 
 # ---------------------- HOME PAGE ----------------------
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
+
+page = st.session_state.page
+
 if page == "Home":
     from pathlib import Path
     import base64
@@ -211,44 +216,42 @@ if page == "Home":
     else:
         st.warning("⚠ Banner image not found. Please check the file path.")
 
-    # --- Welcome Card ---
+    # --- Modern "How It Works" Card ---
     st.markdown("""
         <div style="
-            background: rgba(255,255,255,0.88);
-            backdrop-filter: blur(6px);
-            border-radius: 18px;
-            padding: 36px 32px;
             max-width: 900px;
-            margin: 0 auto 48px auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            margin: 0 auto 40px auto;
+            padding: 40px;
+            border-radius: 20px;
+            background: linear-gradient(145deg, #ffffff, #f0f8ff);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
             font-family: 'Poppins', sans-serif;
-            color: #1e1e1e;
+            color: #1a1a1a;
         ">
-            <p style="font-size:1.05rem; line-height:1.7; text-align:justify;">
+            <h2 style="color:#004aad; font-size:2.2rem; font-weight:700; text-align:center; margin-bottom:25px;">
+                Welcome to Drop Watch SA
+            </h2>
+            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
                 directly to their local municipalities. Report leaks, upload images, provide exact locations,
                 and track repair progress — all in one place.
             </p>
-            <p style="font-size:1.05rem; line-height:1.7; text-align:justify;">
+            <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Every report helps conserve water and strengthens our infrastructure. Help us save every drop.
             </p>
-            <div style="margin-top:25px;">
-                <h3 style="color:#004aad;">How It Works</h3>
-                <ol>
-                    <li>Open the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
-                    <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
-                    <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
-                </ol>
-            </div>
+            <h3 style="color:#004aad; font-size:1.6rem; margin-top:30px;">How It Works</h3>
+            <ol style="font-size:1.05rem; line-height:1.7; margin-left:20px;">
+                <li>Open the <b>Submit Report</b> page and provide leak details, including location and photos.</li>
+                <li>Receive a unique <b>Reference Code</b> via email for tracking.</li>
+                <li>Visit the <b>Check Status</b> page to monitor the repair progress in real time.</li>
+            </ol>
         </div>
     """, unsafe_allow_html=True)
 
     # --- Get Started Button ---
     st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
     if st.button("Get Started", key="home_get_started"):
-        # Update session state to navigate to Submit Report
-        st.session_state.page = "Submit Report"
-        st.experimental_rerun()
+        st.session_state.page = "Submit Report"  # Updates page, no rerun needed
     st.markdown("</div>", unsafe_allow_html=True)
 
 
