@@ -185,11 +185,12 @@ if page == "Home":
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    
+ 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
     import folium
     from streamlit_folium import st_folium
+    from pathlib import Path
 
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
@@ -230,51 +231,46 @@ elif page == "Submit Report":
 
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-        location_address = st.text_input("Address of Leak (optional if using map)")
+        location_input = st.text_input("Location (Coordinates or Address)")
 
         st.markdown("*Or select location on map:*")
-
         # Default map center (South Africa)
-        default_location = [-30.5595, 22.9375]
-        m = folium.Map(location=default_location, zoom_start=5)
+        m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
 
-        # If previous selection exists, show marker there
-        initial_lat, initial_lon = st.session_state.get("location_lat", default_location[0]), st.session_state.get("location_lon", default_location[1])
-        marker = folium.Marker(location=[initial_lat, initial_lon], draggable=True)
+        # If coordinates are already typed, set marker there
+        try:
+            if "," in location_input:
+                lat, lon = map(float, location_input.split(","))
+                marker = folium.Marker(location=[lat, lon], draggable=True)
+            else:
+                marker = folium.Marker(location=[-30.5595, 22.9375], draggable=True)
+        except:
+            marker = folium.Marker(location=[-30.5595, 22.9375], draggable=True)
+
         marker.add_to(m)
-
-        # Render map and capture updated data
         map_data = st_folium(m, height=300, width=700)
 
-        # Update latitude and longitude if pin moved
+        # Update location_input automatically if pin moved
         if map_data and map_data.get("last_clicked"):
             latitude = map_data["last_clicked"]["lat"]
             longitude = map_data["last_clicked"]["lng"]
-            st.session_state["location_lat"] = latitude
-            st.session_state["location_lon"] = longitude
-            # Automatically fill the location_address with coordinates
-            location_address = f"{latitude}, {longitude}"
+            location_input = f"{latitude},{longitude}"
         else:
-            latitude = st.session_state.get("location_lat")
-            longitude = st.session_state.get("location_lon")
-
-        # Also display the selected coordinates in the input box
-        st.text_input("Selected Coordinates (auto-filled)", value=location_address, key="location_input")
-
-    # Image uploader
-    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
+            latitude = None
+            longitude = None
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit_clicked:
-        if not name or not contact or (not location_address and not (latitude and longitude)):
+        if not name or not contact or (not location_input):
             st.error("Please provide your name, email, and either an address or select a location on the map.")
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
             # --- Save Image Locally ---
+            image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
             if image:
                 os.makedirs("leak_images", exist_ok=True)
                 image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
@@ -286,15 +282,21 @@ elif page == "Submit Report":
             ref_code = str(uuid.uuid4())[:8].upper()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            # Parse coordinates if input is lat,long
+            try:
+                lat_val, lon_val = map(float, location_input.split(","))
+            except:
+                lat_val, lon_val = None, None
+
             report = {
                 "Reference": ref_code,
                 "Name": name,
                 "Contact": contact,
                 "Municipality": municipality,
                 "Leak Type": leak_type,
-                "Location": location_address,
-                "Latitude": latitude,
-                "Longitude": longitude,
+                "Location": location_input,
+                "Latitude": lat_val,
+                "Longitude": lon_val,
                 "DateTime": timestamp,
                 "ImageURL": image_path,
                 "Status": "Pending"
@@ -304,10 +306,9 @@ elif page == "Submit Report":
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
 
-                # Darker green background for visibility
                 st.markdown(f"""
-                    <div style="background-color:#4CAF50;border-left:5px solid #008080;
-                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                    <div style="background-color:#00796B;border-left:5px solid #004D40;
+                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                         <h3 style="color:white;">✅ Report Submitted Successfully!</h3>
                         <p><b>Reference Code:</b> {ref_code}</p>
                         <p><b>Date & Time:</b> {timestamp}</p>
@@ -319,7 +320,6 @@ elif page == "Submit Report":
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 # ---------------------- CHECK STATUS PAGE ----------------------
 elif page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
