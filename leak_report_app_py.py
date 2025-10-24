@@ -194,9 +194,8 @@ def upload_to_drive(file_path, file_name):
         body={"role": "reader", "type": "anyone"}
     ).execute()
     return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
-
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-    elif page == "Submit Report":
+elif page == "Submit Report":
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     if banner_path.exists():
@@ -281,3 +280,33 @@ def upload_to_drive(file_path, file_name):
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+elif page == "Check Status":
+    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("Check Report Status")
+    user_ref = st.text_input("Enter Your Reference Code")
+
+    if st.button("Check Status", use_container_width=True):
+        try:
+            client = get_gsheet_client()
+            sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+            records = sheet.get_all_records()
+            match = next((row for row in records if row["Reference"] == user_ref), None)
+
+            if match:
+                st.success(f"Status for {user_ref}: {match['Status']}")
+                st.write(match)
+                image_url = match.get("ImageURL", "")
+                if image_url:
+                    st.image(image_url, caption=f"Report {user_ref}", use_column_width=True)
+                else:
+                    st.info("No image uploaded for this report.")
+            else:
+                st.warning("Reference code not found.")
+        except Exception as e:
+            st.error(f"Could not check status: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
