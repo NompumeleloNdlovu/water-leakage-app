@@ -505,4 +505,4 @@ def send_reference_email(to_email, ref_code, name, resolved=False):
             smtp.send_message(msg)
     except Exception as e:
         st.error(f"Email failed: {e}")
-=True)
+   =True)
