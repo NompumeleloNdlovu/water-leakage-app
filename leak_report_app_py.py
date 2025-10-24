@@ -170,64 +170,53 @@ if page == "Home":
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
-    # Banner (using the admin home page image)
-   # Modern Banner (Submit Report Page)
-import base64
-from pathlib import Path
+    import base64
+    from pathlib import Path
 
-banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    # --- Banner (Admin homepage image) ---
+    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
-if banner_path.exists():
-    with open(banner_path, "rb") as f:
-        img_base64 = base64.b64encode(f.read()).decode()
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            img_base64 = base64.b64encode(f.read()).decode()
 
-    st.markdown(
-        f"""
-        <div style="
-            position: relative;
-            width: 100%;
-            height: 150px;
-            overflow: hidden;
-            border-radius: 15px;
-            margin-bottom: 25px;
-        ">
-            <img src="data:image/jpg;base64,{img_base64}" 
-                 style="width:100%; height:100%; object-fit:cover; filter: brightness(0.6);">
+        st.markdown(
+            f"""
             <div style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: white;
-                font-size: 28px;
-                font-weight: bold;
-                text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
-                font-family: 'Poppins', sans-serif;
+                position: relative;
+                width: 100%;
+                height: 140px;
+                overflow: hidden;
+                border-radius: 15px;
+                margin-bottom: 25px;
             ">
-                Report a Water Leak
+                <img src="data:image/jpg;base64,{img_base64}" 
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                <div style="
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: white;
+                    font-size: 26px;
+                    font-weight: bold;
+                    text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+                    font-family: 'Poppins', sans-serif;
+                ">
+                    Report a Water Leak
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-else:
-    st.warning("⚠️ Banner image not found — please check the file path.")
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.warning("⚠️ Banner image not found — please check the file path.")
 
-    st.markdown(
-        f"""
-        <div style="width:100%; max-height:200px; overflow:hidden; border-radius:15px; margin-bottom:20px;">
-            <img src="{banner_path}" style="width:100%; height:auto; object-fit:cover;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Form container
+    # --- Form Container ---
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
-    # Two-column layout for better balance
     col1, col2 = st.columns(2)
 
     with col1:
@@ -246,7 +235,6 @@ else:
         location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
         image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
-    # Submit button centered
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -269,6 +257,8 @@ else:
                 st.success("Image uploaded successfully.")
 
             ref_code = str(uuid.uuid4())[:8].upper()
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             report = {
                 "Reference": ref_code,
                 "Name": name,
@@ -276,7 +266,7 @@ else:
                 "Municipality": municipality,
                 "Leak Type": leak_type,
                 "Location": location,
-                "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "DateTime": timestamp,
                 "ImageURL": image_path,
                 "Status": "Pending"
             }
@@ -284,8 +274,28 @@ else:
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"✅ Report submitted successfully! Reference Code: {ref_code}")
-                st.info("Check your email for confirmation.")
+
+                # --- Success Card ---
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color: #E8F5E9;
+                        border-left: 5px solid #008080;
+                        border-radius: 12px;
+                        padding: 20px;
+                        margin-top: 30px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    ">
+                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
+                        <p><b>Reference Code:</b> {ref_code}</p>
+                        <p><b>Date & Time:</b> {timestamp}</p>
+                        <p><b>Confirmation sent to:</b> {contact}</p>
+                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track the progress of your report.</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
