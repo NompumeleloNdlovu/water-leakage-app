@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""leak_report_app_modern_final.py"""
+"""leak_report_app_modern_final_fixed.py"""
 
 import streamlit as st
 import os
@@ -13,13 +13,11 @@ import smtplib
 import base64
 import folium
 from streamlit_folium import st_folium
-   
-
-
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from mimetypes import guess_type
+
 # ---------------------- COLORS ----------------------
 COLORS = {
     "teal_blue": "#008080",
@@ -175,59 +173,56 @@ def save_image_locally(image):
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
 
-      # --- Banner for Submit Report Page ---
-      banner_path = Path("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
-      if banner_path.exists():
-          with open(banner_path, "rb") as f:
-              banner_base64 = base64.b64encode(f.read()).decode()
-          
-          st.markdown(f"""
-          <div style="
-              position: relative;
-              width: 100%;
-              height: 180px;
-              border-radius: 20px;
-              overflow: hidden;
-              margin-bottom: 25px;
-          ">
-              <img src="data:image/jpg;base64,{banner_base64}" 
-                   style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-              <div style="
-                  position: absolute;
-                  top: 50%;
-                  left: 50%;
-                  transform: translate(-50%, -50%);
-                  color: white;
-                  font-size: 28px;
-                  font-weight: bold;
-                  text-align: center;
-                  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
-                  font-family: 'Poppins', sans-serif;
-              ">
-                  Report a Water Leak
-              </div>
-          </div>
-          """, unsafe_allow_html=True)
-      else:
-          st.warning("⚠ Banner image not found. Please check the file path.")
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.title("Welcome to Drop Watch SA")
-    st.markdown(
-        "This platform enables citizens to report water leaks directly to their municipalities "
-        "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
-    )
-    st.markdown("### How It Works:")
-    st.markdown("""
-    1. Open **Submit Report** and fill in leak details.  
-    2. Receive a **Reference Code** via email.  
-    3. Use **Check Status** to monitor the repair progress.
-    """)
-    st.markdown("</div>", unsafe_allow_html=True)
+    banner_path = Path("images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg")
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            banner_base64 = base64.b64encode(f.read()).decode()
 
- 
+        st.markdown(f"""
+        <div style="
+            position: relative;
+            width: 100%;
+            height: 180px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 25px;
+        ">
+            <img src="data:image/jpg;base64,{banner_base64}" 
+                 style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+            <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-size: 28px;
+                font-weight: bold;
+                text-align: center;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+                font-family: 'Poppins', sans-serif;
+            ">
+                Report a Water Leak
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠ Banner image not found. Please check the file path.")
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.title("Welcome to Drop Watch SA")
+        st.markdown(
+            "This platform enables citizens to report water leaks directly to their municipalities "
+            "and track progress until resolution. Your reports help save water and strengthen community infrastructure."
+        )
+        st.markdown("### How It Works:")
+        st.markdown("""
+        1. Open **Submit Report** and fill in leak details.  
+        2. Receive a **Reference Code** via email.  
+        3. Use **Check Status** to monitor the repair progress.
+        """)
+        st.markdown("</div>", unsafe_allow_html=True)
+
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
-
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     if banner_path.exists():
@@ -267,13 +262,11 @@ elif page == "Submit Report":
 
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-        # Location text input updates dynamically
         location_input = st.text_input("Location (Address or Coordinates)")
 
         st.markdown("*Or select location on the map (drag or double-click pin):*")
         m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
 
-        # Initialize marker
         if location_input and "," in location_input:
             try:
                 lat, lon = map(float, location_input.split(","))
@@ -285,13 +278,10 @@ elif page == "Submit Report":
         marker = folium.Marker(location=[lat, lon], draggable=True)
         marker.add_to(m)
 
-        # Display map
         map_data = st_folium(m, height=300, width=700)
 
-        # Update location_input dynamically
         latitude, longitude = None, None
         if map_data:
-            # Double-clicked or dragged marker
             if map_data.get("last_object_clicked"):
                 latitude = map_data["last_object_clicked"]["lat"]
                 longitude = map_data["last_object_clicked"]["lng"]
@@ -302,7 +292,6 @@ elif page == "Submit Report":
             if latitude and longitude:
                 location_input = f"{latitude},{longitude}"
 
-    # --- Image uploader (before submit) ---
     image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
@@ -315,7 +304,6 @@ elif page == "Submit Report":
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
-            # --- Save Image Locally ---
             if image:
                 os.makedirs("leak_images", exist_ok=True)
                 image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
@@ -359,6 +347,7 @@ elif page == "Submit Report":
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 # ---------------------- CHECK STATUS PAGE ----------------------
 elif page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -376,7 +365,6 @@ elif page == "Check Status":
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
 
-                # Show coordinates on map if available
                 latitude = match.get("Latitude")
                 longitude = match.get("Longitude")
                 if latitude and longitude:
@@ -385,7 +373,6 @@ elif page == "Check Status":
                     st_folium(map_check, height=300, width=700)
                 else:
                     st.info("No location available for this report.")
-
             else:
                 st.warning("Reference code not found.")
 
