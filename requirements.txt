@@ -9,4 +9,7 @@ google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
 seaborn
+streamlit-folium==0.14.0
+folium==0.19.1
+
 
