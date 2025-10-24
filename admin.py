@@ -213,20 +213,22 @@ def home_page(df):
         st.warning("No reports found yet.")
         return
 
-    # --- Time-based greeting ---
-    hour = datetime.now().hour
-    if hour < 12:
-        greeting = "Good morning"
-    elif hour < 17:
-        greeting = "Good afternoon"
-    else:
-        greeting = "Good evening"
+ # --- Time-based greeting ---
+hour = datetime.now().hour
+if hour < 12:
+    greeting = "Good morning"
+elif hour < 17:
+    greeting = "Good afternoon"
+else:
+    greeting = "Good evening"
 
-    # --- Banner with background image ---
-    banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
-    display_banner(banner_image_path, f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal")
+# --- Banner with background image ---
+banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+display_banner(
+    banner_image_path,
+    f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
+)
 
-    banner_base64 = get_base64_image(banner_image_path)
 
     st.markdown(
         f"""
