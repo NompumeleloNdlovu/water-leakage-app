@@ -160,44 +160,37 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 
 # ---------------------- GOOGLE DRIVE UPLOAD ----------------------
 def upload_to_drive(file_path, file_name):
-    """Uploads an image to a Google Shared Drive and returns a public URL."""
+    """Uploads an image to a Shared Google Drive folder and returns a public URL."""
     creds = Credentials.from_service_account_info(
         st.secrets["google_service_account"],
         scopes=["https://www.googleapis.com/auth/drive"]
     )
     drive_service = build("drive", "v3", credentials=creds)
 
-    # Shared Drive ID
-    shared_drive_id = "1IC8oYUUkt5oVOset2GUn3xsYGplqck7Y"  # Replace with your shared drive ID
+    folder_id = "13yj6S7b5Jvtfe0W4XbJMVi1K5eX-oqbj"
 
-    # File metadata with parent folder in the shared drive
     file_metadata = {
         "name": file_name,
-        "parents": [shared_drive_id]
+        "parents": [folder_id]
     }
 
     media = MediaFileUpload(file_path, mimetype="image/jpeg")
 
-    try:
-        uploaded_file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields="id",
-            supportsAllDrives=True  # Important for shared drives
-        ).execute()
+    uploaded_file = drive_service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True  # Important for shared drives
+    ).execute()
 
-        # Make the file publicly viewable
-        drive_service.permissions().create(
-            fileId=uploaded_file.get("id"),
-            body={"role": "reader", "type": "anyone"},
-            supportsAllDrives=True
-        ).execute()
+    # Make the file publicly viewable
+    drive_service.permissions().create(
+        fileId=uploaded_file.get("id"),
+        body={"role": "reader", "type": "anyone"},
+        supportsAllDrives=True
+    ).execute()
 
-        return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
-    except Exception as e:
-        st.error(f"Google Drive upload failed: {e}")
-        return ""
-
+    return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
@@ -236,7 +229,7 @@ elif page == "Submit Report":
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.warning("⚠️ Banner image not found.")
+        st.warning("⚠ Banner image not found.")
 
     # --- Form Container ---
     st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -250,8 +243,10 @@ elif page == "Submit Report":
         contact = st.text_input("Email Address", placeholder="example@email.com")
         municipality = st.selectbox(
             "Select Municipality",
-            ["City of Johannesburg", "City of Cape Town", "eThekwini",
-             "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"]
+            [
+                "City of Johannesburg", "City of Cape Town", "eThekwini",
+                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+            ]
         )
 
     with col2:
@@ -269,7 +264,7 @@ elif page == "Submit Report":
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
-            # Handle Image Upload
+            # --- Handle Image Upload ---
             if image:
                 os.makedirs("temp", exist_ok=True)
                 temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
@@ -277,10 +272,14 @@ elif page == "Submit Report":
                     f.write(image.read())
 
                 st.info("📤 Uploading image to Google Drive...")
-                image_path = upload_to_drive(temp_path, image.name)
-                if image_path:
+                try:
+                    image_path = upload_to_drive(temp_path, image.name)
                     st.success("✅ Image uploaded successfully!")
-                os.remove(temp_path)
+                except Exception as e:
+                    st.error(f"Google Drive upload failed: {e}")
+                    image_path = ""
+                finally:
+                    os.remove(temp_path)
             else:
                 image_path = ""
 
@@ -335,9 +334,9 @@ elif page == "Check Status":
             if match:
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
-                image_url = match.get("ImageURL", "")
-                if image_url:
-                    st.image(image_url, caption=f"Report {user_ref}", use_column_width=True)
+                image_path = match.get("ImageURL", "")
+                if image_path:
+                    st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
             else:
