@@ -286,7 +286,7 @@ st.markdown(
     )
 
     # --- Metrics calculations ---
-    df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
+     df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
     total_reports = len(df_filtered)
     resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
     pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
