@@ -188,132 +188,127 @@ if page == "Home":
     
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-import streamlit as st
-import os
-import uuid
-from datetime import datetime
-import pandas as pd
-from streamlit_folium import st_folium
-import folium
+elif page == "Submit Report":
+    import folium
+    from streamlit_folium import st_folium
 
-# Banner
-banner_path = "images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg"
-if os.path.exists(banner_path):
-    with open(banner_path, "rb") as f:
-        img_base64 = base64.b64encode(f.read()).decode()
-    st.markdown(f"""
-        <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
-            <img src="data:image/jpg;base64,{img_base64}" 
-                 style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                        color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
-                        font-family:'Poppins', sans-serif;">
-                Report a Water Leak
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<div class='card'>", unsafe_allow_html=True)
-st.header("Submit a Water Leak Report")
-st.markdown("Fill in the details below to help your municipality respond promptly.")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    name = st.text_input("Full Name")
-    contact = st.text_input("Email Address", placeholder="example@email.com")
-    municipality = st.selectbox(
-        "Select Municipality",
-        ["City of Johannesburg", "City of Cape Town", "eThekwini",
-         "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"]
-    )
-
-with col2:
-    leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-    address = st.text_input("Location / Address", placeholder="e.g. 123 Main Rd, Soweto")
-    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
-
-# --- GPS capture ---
-use_gps = st.checkbox("Use my current GPS location (optional)")
-latitude, longitude = None, None
-if use_gps:
-    latitude = st.text_input("Latitude (optional, auto or manual)")
-    longitude = st.text_input("Longitude (optional, auto or manual)")
-
-# --- Interactive Map for pin drop ---
-st.markdown("### Or select location on map")
-map_center = [-26.2041, 28.0473]  # default Johannesburg
-m = folium.Map(location=map_center, zoom_start=10)
-marker = None
-
-map_data = st_folium(m, width=700, height=400)
-
-if map_data and map_data.get("last_clicked"):
-    clicked = map_data["last_clicked"]
-    final_lat, final_lon = clicked["lat"], clicked["lng"]
-    st.success(f"Map pin selected: {final_lat:.6f}, {final_lon:.6f}")
-else:
-    final_lat, final_lon = latitude, longitude
-
-# --- Submit button ---
-submit_clicked = st.button("Submit Report", use_container_width=True)
-
-if submit_clicked:
-    if not name or not contact or (not address and not final_lat and not final_lon):
-        st.error("Name, Email, and Location are required.")
-    elif not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', contact):
-        st.error("Please enter a valid email address.")
-    else:
-        # Save image locally
-        if image:
-            os.makedirs("leak_images", exist_ok=True)
-            image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
-            with open(image_path, "wb") as f:
-                f.write(image.read())
-        else:
-            image_path = ""
-
-        ref_code = str(uuid.uuid4())[:8].upper()
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        report = {
-            "Reference": ref_code,
-            "Name": name,
-            "Contact": contact,
-            "Municipality": municipality,
-            "Leak Type": leak_type,
-            "Address": address,
-            "Latitude": final_lat,
-            "Longitude": final_lon,
-            "DateTime": timestamp,
-            "ImageURL": image_path,
-            "Status": "Pending"
-        }
-
-        try:
-            save_report_to_sheet(report)
-            send_reference_email(contact, ref_code, name)
-
-            st.markdown(f"""
-                <div style="background-color:#E8F5E9;border-left:5px solid #008080;
-                            border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                    <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
-                    <p><b>Reference Code:</b> {ref_code}</p>
-                    <p><b>Date & Time:</b> {timestamp}</p>
-                    <p><b>Confirmation sent to:</b> {contact}</p>
-                    <p><b>Location:</b> {address if address else f'{final_lat}, {final_lon}'}</p>
-                    <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
+    # --- Banner (small banner image) ---
+    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    if banner_path.exists():
+        with open(banner_path, "rb") as f:
+            img_base64 = base64.b64encode(f.read()).decode()
+        st.markdown(f"""
+            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
+                <img src="data:image/jpg;base64,{img_base64}" 
+                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
+                            font-family:'Poppins', sans-serif;">
+                    Report a Water Leak
                 </div>
-            """, unsafe_allow_html=True)
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("⚠ Banner image not found. Please check the file path.")
 
-        except Exception as e:
-            st.error(f"Failed to save report: {e}")
+    # --- Form Container ---
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("Submit a Water Leak Report")
+    st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
-st.markdown("</div>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
 
+    with col1:
+        name = st.text_input("Full Name")
+        contact = st.text_input("Email Address", placeholder="example@email.com")
+        municipality = st.selectbox(
+            "Select Municipality",
+            [
+                "City of Johannesburg", "City of Cape Town", "eThekwini",
+                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+            ]
+        )
+
+    with col2:
+        leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+        location_address = st.text_input("Address of Leak (optional if using map)")
+        
+        st.markdown("**Or select location on map:**")
+        # Default map center (South Africa)
+        m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
+        marker = folium.Marker(
+            location=[-30.5595, 22.9375],
+            draggable=True
+        )
+        marker.add_to(m)
+        map_data = st_folium(m, height=300, width=700)
+        
+        # Capture coordinates from map if user moved marker
+        if map_data and map_data.get("last_clicked"):
+            latitude = map_data["last_clicked"]["lat"]
+            longitude = map_data["last_clicked"]["lng"]
+        else:
+            latitude = None
+            longitude = None
+
+    st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
+    submit_clicked = st.button("Submit Report", use_container_width=False)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if submit_clicked:
+        if not name or not contact or (not location_address and not (latitude and longitude)):
+            st.error("Please provide your name, email, and either an address or select a location on the map.")
+        elif not is_valid_email(contact):
+            st.error("Please enter a valid email address.")
+        else:
+            # --- Save Image Locally ---
+            image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
+            if image:
+                os.makedirs("leak_images", exist_ok=True)
+                image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
+                with open(image_path, "wb") as f:
+                    f.write(image.read())
+            else:
+                image_path = ""
+
+            ref_code = str(uuid.uuid4())[:8].upper()
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            report = {
+                "Reference": ref_code,
+                "Name": name,
+                "Contact": contact,
+                "Municipality": municipality,
+                "Leak Type": leak_type,
+                "Location": location_address,
+                "Latitude": latitude,
+                "Longitude": longitude,
+                "DateTime": timestamp,
+                "ImageURL": image_path,
+                "Status": "Pending"
+            }
+
+            try:
+                save_report_to_sheet(report)
+                send_reference_email(contact, ref_code, name)
+
+                st.markdown(f"""
+                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
+                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
+                        <p><b>Reference Code:</b> {ref_code}</p>
+                        <p><b>Date & Time:</b> {timestamp}</p>
+                        <p><b>Confirmation sent to:</b> {contact}</p>
+                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Failed to save report: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- CHECK STATUS PAGE ----------------------
-if page == "Check Status":
+elif page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Check Report Status")
     user_ref = st.text_input("Enter Your Reference Code")
@@ -329,13 +324,15 @@ if page == "Check Status":
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
 
-                # Show location on map if coordinates exist
-                lat, lon = match.get("Latitude"), match.get("Longitude")
-                address = match.get("Address")
-                if lat and lon:
-                    st.map(pd.DataFrame([[lat, lon]], columns=["lat", "lon"]))
-                elif address:
-                    st.info(f"Reported Address: {address}")
+                # Show coordinates on map if available
+                latitude = match.get("Latitude")
+                longitude = match.get("Longitude")
+                if latitude and longitude:
+                    map_check = folium.Map(location=[latitude, longitude], zoom_start=16)
+                    folium.Marker([latitude, longitude], tooltip=f"Leak: {match['Leak Type']}").add_to(map_check)
+                    st_folium(map_check, height=300, width=700)
+                else:
+                    st.info("No location available for this report.")
 
             else:
                 st.warning("Reference code not found.")
