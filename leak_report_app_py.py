@@ -186,15 +186,12 @@ if page == "Home":
     st.markdown("</div>", unsafe_allow_html=True)
 
     
-
 # ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
     import folium
     from streamlit_folium import st_folium
-    from pathlib import Path
-    import base64
 
-    # --- Banner (small banner image) ---
+    # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     if banner_path.exists():
         with open(banner_path, "rb") as f:
@@ -233,39 +230,39 @@ elif page == "Submit Report":
 
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-        
-        # Location text input
         location_address = st.text_input("Address of Leak (optional if using map)")
 
         st.markdown("*Or select location on map:*")
+
         # Default map center (South Africa)
-        m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
-        marker = folium.Marker(
-            location=[-30.5595, 22.9375],
-            draggable=True
-        )
+        default_location = [-30.5595, 22.9375]
+        m = folium.Map(location=default_location, zoom_start=5)
+
+        # If previous selection exists, show marker there
+        initial_lat, initial_lon = st.session_state.get("location_lat", default_location[0]), st.session_state.get("location_lon", default_location[1])
+        marker = folium.Marker(location=[initial_lat, initial_lon], draggable=True)
         marker.add_to(m)
+
+        # Render map and capture updated data
         map_data = st_folium(m, height=300, width=700)
 
-        # Capture coordinates from map if marker moved
-        latitude = None
-        longitude = None
-        if map_data:
-            # st_folium v0.10+ returns 'last_clicked' or 'last_active_drawing'
-            if map_data.get("last_clicked"):
-                latitude = map_data["last_clicked"]["lat"]
-                longitude = map_data["last_clicked"]["lng"]
-            # If the marker itself was dragged
-            if map_data.get("last_object_rendered"):
-                last_obj = map_data["last_object_rendered"]
-                if last_obj.get("lat") and last_obj.get("lng"):
-                    latitude = last_obj["lat"]
-                    longitude = last_obj["lng"]
+        # Update latitude and longitude if pin moved
+        if map_data and map_data.get("last_clicked"):
+            latitude = map_data["last_clicked"]["lat"]
+            longitude = map_data["last_clicked"]["lng"]
+            st.session_state["location_lat"] = latitude
+            st.session_state["location_lon"] = longitude
+            # Automatically fill the location_address with coordinates
+            location_address = f"{latitude}, {longitude}"
+        else:
+            latitude = st.session_state.get("location_lat")
+            longitude = st.session_state.get("location_lon")
 
-            # Automatically update the Location text input with coordinates
-            if latitude and longitude:
-                location_address = f"{latitude}, {longitude}"
-                st.experimental_rerun()  # optional: to update input in real-time
+        # Also display the selected coordinates in the input box
+        st.text_input("Selected Coordinates (auto-filled)", value=location_address, key="location_input")
+
+    # Image uploader
+    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
@@ -278,7 +275,6 @@ elif page == "Submit Report":
             st.error("Please enter a valid email address.")
         else:
             # --- Save Image Locally ---
-            image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
             if image:
                 os.makedirs("leak_images", exist_ok=True)
                 image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
@@ -308,10 +304,10 @@ elif page == "Submit Report":
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
 
-                # Darker notification box for visibility
+                # Darker green background for visibility
                 st.markdown(f"""
-                    <div style="background-color:#80CBC4;border-left:5px solid #006666;
-                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                    <div style="background-color:#4CAF50;border-left:5px solid #008080;
+                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
                         <h3 style="color:white;">✅ Report Submitted Successfully!</h3>
                         <p><b>Reference Code:</b> {ref_code}</p>
                         <p><b>Date & Time:</b> {timestamp}</p>
@@ -319,12 +315,10 @@ elif page == "Submit Report":
                         <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
                     </div>
                 """, unsafe_allow_html=True)
-
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ---------------------- CHECK STATUS PAGE ----------------------
 elif page == "Check Status":
