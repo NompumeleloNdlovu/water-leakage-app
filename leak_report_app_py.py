@@ -473,7 +473,6 @@ def notify_if_resolved(report):
         except Exception as e:
             st.error(f"Error sending resolved notification: {e}")
 
-
 # ---------------------- UPDATED EMAIL FUNCTION ----------------------
 def send_reference_email(to_email, ref_code, name, resolved=False):
     import smtplib
@@ -489,9 +488,20 @@ def send_reference_email(to_email, ref_code, name, resolved=False):
 
     if resolved:
         subject += " has been Resolved"
-        content = f"Hi {name},\n\nYour report with ID {ref_code} has been resolved.\nThank you for helping us save water!\n\nRegards,\nMunicipal Water Department"
+        content = (
+            f"Hi {name},\n\n"
+            f"Your report with ID {ref_code} has been resolved.\n"
+            "Thank you for helping us save water!\n\n"
+            "Regards,\nMunicipal Water Department"
+        )
     else:
-        content = f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\nUse this code to check the status.\n\nRegards,\nMunicipal Water Department"
+        content = (
+            f"Hi {name},\n\n"
+            f"Thank you for reporting the leak.\n"
+            f"Your reference number is: {ref_code}\n"
+            "Use this code to check the status.\n\n"
+            "Regards,\nMunicipal Water Department"
+        )
 
     msg = EmailMessage()
     msg["Subject"] = subject
@@ -499,12 +509,10 @@ def send_reference_email(to_email, ref_code, name, resolved=False):
     msg["To"] = to_email
     msg.set_content(content)
 
-   try:
-    with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-        smtp.login(smtp_user, smtp_password)
-        smtp.send_message(msg)
-except Exception as e:
-    st.error(f"Email failed: {e}")
-
-
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+    except Exception as e:
+        st.error(f"Email failed: {e}")
 
