@@ -174,7 +174,7 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
- from pathlib import Path
+from pathlib import Path
 import base64
 import streamlit as st
 
