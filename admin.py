@@ -193,18 +193,28 @@ def display_banner(image_path, title_text):
         unsafe_allow_html=True
     )
 
+
 def home_page(df):
     if df.empty:
         st.warning("No reports found yet.")
         return
 
-    # --- Display Banner ---
+    # --- Time-based greeting ---
+    hour = datetime.now().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    # --- Banner with background image ---
     banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
-    display_banner(
-        banner_image_path,
-        st.session_state.admin_name,
-        st.session_state.admin_municipality
-    )
+    title_text = f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
+    
+    display_banner(banner_image_path, title_text)
+
+
 
     # --- Metrics calculations ---
     df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
