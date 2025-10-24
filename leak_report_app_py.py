@@ -212,7 +212,7 @@ if page == "Home":
 
     
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-elif page == "Submit Report":
+else:  # Using else instead of elif to avoid indentation issues
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     if banner_path.exists():
@@ -238,7 +238,6 @@ elif page == "Submit Report":
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
     col1, col2 = st.columns(2)
-
     with col1:
         name = st.text_input("Full Name")
         contact = st.text_input("Email Address", placeholder="example@email.com")
@@ -249,7 +248,6 @@ elif page == "Submit Report":
                 "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
             ]
         )
-
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
         location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
@@ -265,16 +263,17 @@ elif page == "Submit Report":
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
-            image_path = ""
+            image_url = ""
             if image:
                 os.makedirs("temp", exist_ok=True)
                 temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
                 with open(temp_path, "wb") as f:
                     f.write(image.read())
-
                 st.info("📤 Uploading image to Google Drive...")
-                image_path = upload_to_drive(temp_path, image.name)
-                st.success("✅ Image uploaded successfully!")
+                uploaded_url = upload_to_drive(temp_path, image.name)
+                if uploaded_url:
+                    image_url = uploaded_url
+                    st.success("✅ Image uploaded successfully!")
                 os.remove(temp_path)
 
             ref_code = str(uuid.uuid4())[:8].upper()
@@ -288,29 +287,19 @@ elif page == "Submit Report":
                 "Leak Type": leak_type,
                 "Location": location,
                 "DateTime": timestamp,
-                "ImageURL": image_path,
+                "ImageURL": image_url,
                 "Status": "Pending"
             }
 
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-
-                st.markdown(f"""
-                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
-                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
-                        <p><b>Reference Code:</b> {ref_code}</p>
-                        <p><b>Date & Time:</b> {timestamp}</p>
-                        <p><b>Confirmation sent to:</b> {contact}</p>
-                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.success(f"✅ Report submitted successfully! Reference Code: {ref_code}")
+                st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ---------------------- CHECK STATUS PAGE ----------------------
 else:
