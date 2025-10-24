@@ -399,42 +399,110 @@ elif page == "Submit Report":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- CHECK STATUS PAGE ----------------------
-elif page == "Check Status":
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.header("Check Report Status")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.header("Check Report Status")
 
-    user_reportid = st.text_input("Enter Your Report ID")
+# User input
+user_reportid = st.text_input("Enter Your Report ID")
 
-    if st.button("Check Status", use_container_width=True):
+if st.button("Check Status", use_container_width=True):
+    try:
+        client = get_gsheet_client()
+        sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+        records = sheet.get_all_records()
+        
+        # Normalize keys (strip spaces)
+        normalized_records = []
+        for row in records:
+            normalized_records.append({k.strip(): v for k, v in row.items()})
+
+        # Find the report using ReportID
+        match = next(
+            (row for row in normalized_records if str(row.get("ReportID")).strip() == user_reportid.strip()), 
+            None
+        )
+
+        if match:
+            # Notify user if report is resolved and not notified yet
+            notify_if_resolved(match)
+
+            # Show report status
+            st.success(f"Status for Report ID {user_reportid}: {match.get('Status', 'Unknown')}")
+            st.write(match)
+
+            # Show coordinates on map if available
+            latitude = match.get("Latitude")
+            longitude = match.get("Longitude")
+            if latitude and longitude:
+                map_check = folium.Map(location=[latitude, longitude], zoom_start=16)
+                folium.Marker([latitude, longitude], tooltip=f"Leak: {match.get('Leak Type','Leak')}").add_to(map_check)
+                st_folium(map_check, height=300, width=700)
+            else:
+                st.info("No location available for this report.")
+
+        else:
+            st.warning("Report ID not found. Please check your input.")
+
+    except Exception as e:
+        st.error(f"Could not check status: {e}")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ---------------------- HELPER FUNCTION ----------------------
+def notify_if_resolved(report):
+    """
+    Send email to user if their report has been resolved and they haven't been notified yet.
+    """
+    if report.get("Status") == "Resolved" and report.get("Notified") != "Yes":
         try:
+            send_reference_email(
+                to_email=report.get("Contact"),
+                ref_code=report.get("ReportID"),
+                name=report.get("Name"),
+                resolved=True  # Custom email for resolved report
+            )
+
+            # Update Google Sheet to mark as notified
             client = get_gsheet_client()
             sheet = client.open_by_key(SPREADSHEET_ID).sheet1
-            records = sheet.get_all_records()
-
-            # Normalize column names to remove extra spaces
-            normalized_records = []
-            for row in records:
-                normalized_row = {k.strip(): v for k, v in row.items()}
-                normalized_records.append(normalized_row)
-
-            # Look for matching report ID
-            match = next((row for row in normalized_records if str(row.get("ReportID")).strip() == user_reportid.strip()), None)
-
-            if match:
-                st.success(f"Status for Report ID {user_reportid}: {match.get('Status', 'Unknown')}")
-                
-                # Show location on map if available
-                lat = match.get("Latitude")
-                lon = match.get("Longitude")
-                if lat and lon:
-                    map_check = folium.Map(location=[float(lat), float(lon)], zoom_start=16)
-                    folium.Marker([float(lat), float(lon)], tooltip=f"Leak: {match.get('Leak Type','Unknown')}").add_to(map_check)
-                    st_folium(map_check, height=300, width=700)
-               
-            else:
-                st.warning("Report ID not found.")
+            cell = sheet.find(str(report.get("ReportID")))
+            col_num = sheet.find("Notified").col
+            sheet.update_cell(cell.row, col_num, "Yes")
 
         except Exception as e:
-            st.error(f"Could not check status: {e}")
+            st.error(f"Error sending resolved notification: {e}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------- UPDATED EMAIL FUNCTION ----------------------
+def send_reference_email(to_email, ref_code, name, resolved=False):
+    import smtplib
+    from email.message import EmailMessage
+
+    smtp_server = "sandbox.smtp.mailtrap.io"
+    smtp_port = 2525
+    smtp_user = st.secrets["mailtrap"]["user"]
+    smtp_password = st.secrets["mailtrap"]["password"]
+
+    sender_email = "leak-reporter@municipality.org"
+    subject = "Your Water Leak Report"
+
+    if resolved:
+        subject += " has been Resolved"
+        content = f"Hi {name},\n\nYour report with ID {ref_code} has been resolved.\nThank you for helping us save water!\n\nRegards,\nMunicipal Water Department"
+    else:
+        content = f"Hi {name},\n\nThank you for reporting the leak.\nYour reference number is: {ref_code}\nUse this code to check the status.\n\nRegards,\nMunicipal Water Department"
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to_email
+    msg.set_content(content)
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+    except Exception as e:
+        st.error(f"Email failed: {e}")
+=True)
