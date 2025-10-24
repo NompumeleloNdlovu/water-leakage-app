@@ -203,24 +203,24 @@ def upload_to_drive(file_path, file_name):
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
  elif page == "Submit Report":
-    # --- Banner ---
-    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
-    if banner_path.exists():
-        with open(banner_path, "rb") as f:
-            img_base64 = base64.b64encode(f.read()).decode()
-        st.markdown(f"""
-            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
-                <img src="data:image/jpg;base64,{img_base64}" 
-                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
-                            font-family:'Poppins', sans-serif;">
-                    Report a Water Leak
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠️ Banner image not found.")
+            # --- Banner ---
+            banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+            if banner_path.exists():
+                with open(banner_path, "rb") as f:
+                    img_base64 = base64.b64encode(f.read()).decode()
+                st.markdown(f"""
+                    <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
+                        <img src="data:image/jpg;base64,{img_base64}" 
+                             style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                                    color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
+                                    font-family:'Poppins', sans-serif;">
+                            Report a Water Leak
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.warning("⚠️ Banner image not found.")
 
     # --- Form Container ---
     st.markdown("<div class='card'>", unsafe_allow_html=True)
