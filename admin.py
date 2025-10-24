@@ -427,65 +427,77 @@ def dashboard_page():
 from streamlit_folium import st_folium
 import folium
 
-# ---------------------- MANAGE REPORTS PAGE ----------------------
+
+# ------------------ MANAGE REPORTS PAGE ------------------
 def manage_reports_page(df, sheet):
-    st.markdown(
-        "<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
-        "<h1 style='text-align:center;color:black;'>Manage Submitted Reports</h1></div>",
-        unsafe_allow_html=True
-    )
+    st.header("Manage Submitted Reports")
 
     if df.empty:
         st.info("No reports have been submitted yet.")
         return
 
-    search = st.text_input("🔍 Search by Reference, Name, or Municipality")
-    if search:
-        df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
+    # Optional: enable later if you want search again
+    # search = st.text_input("🔍 Search by Reference, Name, or Municipality")
+    # if search:
+    #     df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
 
     for _, row in df.iterrows():
-        with st.expander(f"📄 {row['Reference']} — {row['Leak Type']} ({row['Status']})"):
-            st.markdown(f"*Reporter:* {row.get('Name', 'N/A')}")
-            st.markdown(f"*Contact:* {row.get('Contact', 'N/A')}")
-            st.markdown(f"*Municipality:* {row.get('Municipality', 'N/A')}")
-            st.markdown(f"*Leak Type:* {row.get('Leak Type', 'N/A')}")
-            st.markdown(f"*Date & Time:* {row.get('DateTime', 'N/A')}")
+        ref = row.get("Reference", f"Unknown-{_+1}")
+        leak_type = row.get("Leak Type", "Unknown")
+        status = row.get("Status", "Pending")
 
-            # --- LOCATION DETAILS ---
-            lat, lon = row.get("Latitude"), row.get("Longitude")
+        with st.expander(f"📄 {ref} — {leak_type} ({status})"):
+            st.markdown(f"**Reporter:** {row.get('Name', 'N/A')}")
+            st.markdown(f"**Contact:** {row.get('Contact', 'N/A')}")
+            st.markdown(f"**Municipality:** {row.get('Municipality', 'N/A')}")
+            st.markdown(f"**Leak Type:** {row.get('Leak Type', 'N/A')}")
+            st.markdown(f"**Date & Time:** {row.get('DateTime', 'N/A')}")
+
+            # --- Location handling (address OR pinned map) ---
+            lat = row.get("Latitude")
+            lon = row.get("Longitude")
             address = row.get("Location", "")
 
-            if lat and lon and not pd.isna(lat) and not pd.isna(lon):
-                st.markdown(f"📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
+            if lat and lon:
+                st.markdown(f"**📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
 
-                # Interactive Map
-                m = folium.Map(location=[lat, lon], zoom_start=16)
-                folium.Marker(
-                    [lat, lon],
-                    tooltip="Reported Leak Location",
-                    icon=folium.Icon(color="blue", icon="tint", prefix="fa")
-                ).add_to(m)
-                st_folium(m, height=300, width=700)
+                try:
+                    import folium
+                    from streamlit_folium import st_folium
+
+                    m = folium.Map(location=[lat, lon], zoom_start=16)
+                    folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
+                    st_folium(m, height=250, width=600)
+                except Exception as e:
+                    st.warning(f"Map could not be displayed: {e}")
+
             elif address:
-                st.markdown(f"📍 Location:** {address}")
+                st.markdown(f"**📍 Location:** {address}")
             else:
-                st.markdown("📍 Location:** No location data provided.")
+                st.markdown("**📍 Location:** _No location data provided._")
 
-            # --- STATUS UPDATE ---
+            # --- Status Update ---
             new_status = st.selectbox(
                 "Update Status",
                 ["Pending", "In Progress", "Resolved"],
-                index=["Pending", "In Progress", "Resolved"].index(row["Status"]) if row["Status"] in ["Pending", "In Progress", "Resolved"] else 0,
-                key=row["Reference"]
+                index=["Pending", "In Progress", "Resolved"].index(status) if status in ["Pending", "In Progress", "Resolved"] else 0,
+                key=f"status_{ref}"
             )
 
-            if st.button(f"Update {row['Reference']}", key=f"update_{row['Reference']}"):
+            if st.button(f"Update {ref}", key=f"update_{ref}"):
                 try:
-                    row_idx = df.index[df["Reference"] == row["Reference"]][0] + 2
-                    sheet.update_cell(row_idx, df.columns.get_loc("Status") + 1, new_status)
-                    st.success(f"✅ Status updated for {row['Reference']}!")
+                    cell = df.index[df["Reference"] == ref][0] + 2
+                    sheet.update_cell(cell, df.columns.get_loc("Status") + 1, new_status)
+                    st.success(f"✅ Status updated for {ref}!")
+                    time.sleep(1)
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error updating status: {e}")
+
+# ------------------ PAGE HANDLER ------------------
+if st.session_state.page == "Manage Reports":
+    manage_reports_page(df, sheet)
+
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
