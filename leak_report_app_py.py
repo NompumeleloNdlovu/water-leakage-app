@@ -173,7 +173,7 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
+    set_main_background("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
 
     st.markdown("<div class='card'>", unsafe_allow_html=True)
 
