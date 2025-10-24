@@ -424,70 +424,68 @@ def dashboard_page():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+from streamlit_folium import st_folium
+import folium
+
 # ---------------------- MANAGE REPORTS PAGE ----------------------
-elif page == "Manage Reports":
-    st.header("Manage Submitted Reports")
+def manage_reports_page(df, sheet):
+    st.markdown(
+        "<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
+        "<h1 style='text-align:center;color:black;'>Manage Submitted Reports</h1></div>",
+        unsafe_allow_html=True
+    )
 
-    try:
-        client = get_gsheet_client()
-        sheet = client.open_by_key(SPREADSHEET_ID).sheet1
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
+    if df.empty:
+        st.info("No reports have been submitted yet.")
+        return
 
-        if df.empty:
-            st.info("No reports have been submitted yet.")
-        else:
-            search = st.text_input("🔍 Search by Reference, Name, or Municipality")
-            if search:
-                df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
+    search = st.text_input("🔍 Search by Reference, Name, or Municipality")
+    if search:
+        df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-            for _, row in df.iterrows():
-                with st.expander(f"📄 {row['Reference']} — {row['Leak Type']} ({row['Status']})"):
-                    st.markdown(f"**Reporter:** {row['Name']}")
-                    st.markdown(f"**Contact:** {row['Contact']}")
-                    st.markdown(f"**Municipality:** {row['Municipality']}")
-                    st.markdown(f"**Leak Type:** {row['Leak Type']}")
-                    st.markdown(f"**Date & Time:** {row['DateTime']}")
+    for _, row in df.iterrows():
+        with st.expander(f"📄 {row['Reference']} — {row['Leak Type']} ({row['Status']})"):
+            st.markdown(f"*Reporter:* {row.get('Name', 'N/A')}")
+            st.markdown(f"*Contact:* {row.get('Contact', 'N/A')}")
+            st.markdown(f"*Municipality:* {row.get('Municipality', 'N/A')}")
+            st.markdown(f"*Leak Type:* {row.get('Leak Type', 'N/A')}")
+            st.markdown(f"*Date & Time:* {row.get('DateTime', 'N/A')}")
 
-                    # --- Location Details ---
-                    address = row.get("Location", "")
-                    lat, lon = row.get("Latitude"), row.get("Longitude")
+            # --- LOCATION DETAILS ---
+            lat, lon = row.get("Latitude"), row.get("Longitude")
+            address = row.get("Location", "")
 
-                    if lat and lon:
-                        st.markdown(f"**📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
-                        try:
-                            import folium
-                            from streamlit_folium import st_folium
-                            m = folium.Map(location=[lat, lon], zoom_start=16)
-                            folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
-                            st_folium(m, height=250, width=600)
-                        except ModuleNotFoundError:
-                            st.info("Install `streamlit-folium` to enable the location map view.")
-                    elif address:
-                        st.markdown(f"**📍 Location:** {address}")
-                    else:
-                        st.markdown("**📍 Location:** _No location data provided._")
+            if lat and lon and not pd.isna(lat) and not pd.isna(lon):
+                st.markdown(f"📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
 
-                    # --- Status Update ---
-                    new_status = st.selectbox(
-                        "Update Status",
-                        ["Pending", "In Progress", "Resolved"],
-                        index=["Pending", "In Progress", "Resolved"].index(row["Status"]),
-                        key=row["Reference"]
-                    )
+                # Interactive Map
+                m = folium.Map(location=[lat, lon], zoom_start=16)
+                folium.Marker(
+                    [lat, lon],
+                    tooltip="Reported Leak Location",
+                    icon=folium.Icon(color="blue", icon="tint", prefix="fa")
+                ).add_to(m)
+                st_folium(m, height=300, width=700)
+            elif address:
+                st.markdown(f"📍 Location:** {address}")
+            else:
+                st.markdown("📍 Location:** No location data provided.")
 
-                    if st.button(f"Update {row['Reference']}", key=f"update_{row['Reference']}"):
-                        try:
-                            cell = df.index[df["Reference"] == row["Reference"]][0] + 2
-                            sheet.update_cell(cell, df.columns.get_loc("Status") + 1, new_status)
-                            st.success(f"✅ Status updated for {row['Reference']}!")
-                        except Exception as e:
-                            st.error(f"Error updating status: {e}")
+            # --- STATUS UPDATE ---
+            new_status = st.selectbox(
+                "Update Status",
+                ["Pending", "In Progress", "Resolved"],
+                index=["Pending", "In Progress", "Resolved"].index(row["Status"]) if row["Status"] in ["Pending", "In Progress", "Resolved"] else 0,
+                key=row["Reference"]
+            )
 
-    except Exception as e:
-        st.error(f"Failed to load reports: {e}")
-
-
+            if st.button(f"Update {row['Reference']}", key=f"update_{row['Reference']}"):
+                try:
+                    row_idx = df.index[df["Reference"] == row["Reference"]][0] + 2
+                    sheet.update_cell(row_idx, df.columns.get_loc("Status") + 1, new_status)
+                    st.success(f"✅ Status updated for {row['Reference']}!")
+                except Exception as e:
+                    st.error(f"Error updating status: {e}")
 
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
