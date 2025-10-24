@@ -176,8 +176,7 @@ import base64
 from pathlib import Path
 
 # --- Read query params to control page ---
-query_params = st.experimental_get_query_params()
-page = query_params.get("page", ["Home"])[0]  # Default to Home
+page = st.query_params.get("page", ["Home"])[0]  # Default to Home
 
 if page == "Home":
     # --- Banner Image ---
@@ -250,7 +249,7 @@ if page == "Home":
     # --- Get Started Button ---
     st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
     if st.button("Get Started"):
-        st.experimental_set_query_params(page="Submit Report")  # Change URL query param
+        st.set_query_params(page="Submit Report")  # Updated method
         st.experimental_rerun()  # Reload app to show Submit Report page
     st.markdown("</div>", unsafe_allow_html=True)
 
