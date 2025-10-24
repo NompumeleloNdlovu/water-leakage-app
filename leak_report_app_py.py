@@ -168,10 +168,10 @@ if page == "Home":
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-       # ---------------------- SUBMIT REPORT PAGE ----------------------
+# ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
-    # ------------------ Banner ------------------
-    banner_path = "images/images/download.jpeg"
+    # Banner (using the admin home page image)
+    banner_path = "images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg"
     st.markdown(
         f"""
         <div style="width:100%; max-height:200px; overflow:hidden; border-radius:15px; margin-bottom:20px;">
@@ -181,27 +181,36 @@ elif page == "Submit Report":
         unsafe_allow_html=True
     )
 
-    # ------------------ Form Card ------------------
+    # Form container
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
-    st.markdown("Provide accurate details to assist your municipality in responding promptly.")
+    st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
-    # Form fields
-    name = st.text_input("Full Name")
-    contact = st.text_input("Email Address", placeholder="example@email.com")
-    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-    leak_types = ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"]
-    leak_type = st.selectbox("Type of Leak", leak_types)
+    # Two-column layout for better balance
+    col1, col2 = st.columns(2)
 
-    municipalities = [
-        "City of Johannesburg", "City of Cape Town", "eThekwini",
-        "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
-    ]
-    municipality = st.selectbox("Select Municipality", municipalities)
+    with col1:
+        name = st.text_input("Full Name")
+        contact = st.text_input("Email Address", placeholder="example@email.com")
+        municipality = st.selectbox(
+            "Select Municipality",
+            [
+                "City of Johannesburg", "City of Cape Town", "eThekwini",
+                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
+            ]
+        )
 
-    image = st.file_uploader("Upload an image of the leak (optional)", type=["jpg", "jpeg", "png"])
+    with col2:
+        leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+        location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+        image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
-    if st.button("Submit Report", use_container_width=True):
+    # Submit button centered
+    st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
+    submit_clicked = st.button("Submit Report", use_container_width=False)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if submit_clicked:
         if not name or not contact or not location:
             st.error("All fields are required.")
         elif not is_valid_email(contact):
@@ -210,7 +219,10 @@ elif page == "Submit Report":
             image_path = ""
             if image:
                 os.makedirs("leak_images", exist_ok=True)
-                image_path = os.path.join("leak_images", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}")
+                image_path = os.path.join(
+                    "leak_images",
+                    f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{image.name}"
+                )
                 with open(image_path, "wb") as f:
                     f.write(image.read())
                 st.success("Image uploaded successfully.")
@@ -231,12 +243,13 @@ elif page == "Submit Report":
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"Report submitted successfully! Reference Code: {ref_code}")
+                st.success(f"✅ Report submitted successfully! Reference Code: {ref_code}")
                 st.info("Check your email for confirmation.")
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ---------------------- CHECK STATUS ----------------------
