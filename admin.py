@@ -424,76 +424,63 @@ def dashboard_page():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------------ MANAGE REPORTS ------------------
-import streamlit as st
+# ---------------------- MANAGE REPORTS PAGE ----------------------
+elif st.session_state.page == "Manage Reports":
+    st.header("Manage Submitted Reports")
 
-def manage_reports_page(df, sheet):
-    if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
-        st.warning("Please log in to view this page.")
-        return
+    try:
+        client = get_gsheet_client()
+        sheet = client.open_by_key(SPREADSHEET_ID).sheet1
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
 
-    # Full-page background with semi-transparent overlay
-    st.markdown(
-        """
-        <div style="
-            background-image: url('images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            padding: 15px;
-            border-radius: 15px;
-            background-color: rgba(255,255,255,0.85);
-        ">
-        """,
-        unsafe_allow_html=True
-    )
+        if df.empty:
+            st.info("No reports have been submitted yet.")
+        else:
+            search = st.text_input("🔍 Search by Reference, Name, or Municipality")
+            if search:
+                df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    st.markdown("## Manage Reports")
+            for _, row in df.iterrows():
+                with st.expander(f"📄 {row['Reference']} — {row['Leak Type']} ({row['Status']})"):
+                    st.markdown(f"**Reporter:** {row['Name']}")
+                    st.markdown(f"**Contact:** {row['Contact']}")
+                    st.markdown(f"**Municipality:** {row['Municipality']}")
+                    st.markdown(f"**Leak Type:** {row['Leak Type']}")
+                    st.markdown(f"**Date & Time:** {row['DateTime']}")
 
-    admin_muni = st.session_state.admin_municipality
-    df_admin = df[df['Municipality'] == admin_muni]
+                    # --- Location Details ---
+                    address = row.get("Location", "")
+                    lat, lon = row.get("Latitude"), row.get("Longitude")
 
-    if df_admin.empty:
-        st.info("No reports for your municipality.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
+                    if lat and lon:
+                        st.markdown(f"**📍 Location:** [Open in Google Maps](https://www.google.com/maps?q={lat},{lon})")
+                        m = folium.Map(location=[lat, lon], zoom_start=16)
+                        folium.Marker([lat, lon], tooltip="Reported Leak").add_to(m)
+                        st_folium(m, height=250, width=600)
+                    elif address:
+                        st.markdown(f"**📍 Location:** {address}")
+                    else:
+                        st.markdown("**📍 Location:** _No location data provided._")
 
-    report_id_col = "ReportID" if "ReportID" in df_admin.columns else "Reference"
-    location_col = "Location"
+                    # --- Status Update ---
+                    new_status = st.selectbox(
+                        "Update Status",
+                        ["Pending", "In Progress", "Resolved"],
+                        index=["Pending", "In Progress", "Resolved"].index(row["Status"]),
+                        key=row["Reference"]
+                    )
 
-    for idx, row in df_admin.iterrows():
-        with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
+                    if st.button(f"Update {row['Reference']}", key=f"update_{row['Reference']}"):
+                        try:
+                            cell = df.index[df["Reference"] == row["Reference"]][0] + 2
+                            sheet.update_cell(cell, df.columns.get_loc("Status") + 1, new_status)
+                            st.success(f"✅ Status updated for {row['Reference']}!")
+                        except Exception as e:
+                            st.error(f"Error updating status: {e}")
 
-            # Color based on status
-            status = row.get("Status", "Pending")
-            color = "#ffcccc" if status == "Pending" else "#ccffcc"
-
-            st.markdown(
-                f"<div style='background-color:{color};padding:10px;border-radius:10px;'>",
-                unsafe_allow_html=True
-            )
-
-            # --- Report details ---
-            display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
-            st.write(display_row)
-
-            # --- Status update ---
-            options = ["Pending", "Resolved"]
-            if status not in options:
-                status = "Pending"
-            new_status = st.selectbox("Update Status", options, index=options.index(status), key=f"status_{idx}")
-            if st.button("Update", key=f"update_{idx}"):
-                try:
-                    cell = sheet.find(str(row[report_id_col]))
-                    sheet.update_cell(cell.row, df.columns.get_loc("Status")+1, new_status)
-                    st.success(f"Status updated to {new_status}")
-                    df.at[idx, "Status"] = new_status
-                except Exception as e:
-                    st.error(f"Failed to update status: {e}")
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Failed to load reports: {e}")
 
 
 # ------------------ SIDEBAR ------------------
