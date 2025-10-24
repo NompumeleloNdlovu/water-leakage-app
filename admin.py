@@ -425,12 +425,15 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
+import os
+import streamlit as st
+
 def manage_reports_page(df, sheet):
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Full-page semi-transparent background (optional)
+    # Full-page background with semi-transparent overlay
     st.markdown(
         """
         <div style="
@@ -461,6 +464,7 @@ def manage_reports_page(df, sheet):
 
     for idx, row in df_admin.iterrows():
         with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
+
             # Color based on status
             status = row.get("Status", "Pending")
             color = "#ffcccc" if status == "Pending" else "#ccffcc"
@@ -470,14 +474,9 @@ def manage_reports_page(df, sheet):
                 unsafe_allow_html=True
             )
 
-            # Drop image columns to simplify display
-            display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
-            st.write(display_row)
-
-            # Show local image if exists
-            image_file = row.get("Image")  # Column containing filename
-            image_url = row.get("ImageURL")  # Optional fallback URL
-
+            # --- Image first ---
+            image_file = row.get("Image")
+            image_url = row.get("ImageURL")
             image_displayed = False
 
             if image_file:
@@ -486,7 +485,6 @@ def manage_reports_page(df, sheet):
                     st.image(local_path, caption=f"Report #{row[report_id_col]}", use_column_width=True)
                     image_displayed = True
 
-            # Fallback to URL if local file not found
             if not image_displayed and image_url and isinstance(image_url, str) and image_url.strip():
                 st.markdown(
                     f'<a href="{image_url}" target="_blank">View Uploaded Image</a>',
@@ -495,11 +493,13 @@ def manage_reports_page(df, sheet):
                 image_displayed = True
 
             if not image_displayed:
-                st.markdown("No image uploaded or file not found.", unsafe_allow_html=True)
+                st.markdown("_No image uploaded or file not found._", unsafe_allow_html=True)
 
-            st.markdown("</div>", unsafe_allow_html=True)
+            # --- Report details ---
+            display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
+            st.write(display_row)
 
-            # Status update
+            # --- Status update ---
             options = ["Pending", "Resolved"]
             if status not in options:
                 status = "Pending"
@@ -513,7 +513,10 @@ def manage_reports_page(df, sheet):
                 except Exception as e:
                     st.error(f"Failed to update status: {e}")
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
+
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
     set_background_local(
