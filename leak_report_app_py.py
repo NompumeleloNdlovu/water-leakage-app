@@ -430,8 +430,7 @@ elif page == "Check Status":
                     map_check = folium.Map(location=[float(lat), float(lon)], zoom_start=16)
                     folium.Marker([float(lat), float(lon)], tooltip=f"Leak: {match.get('Leak Type','Unknown')}").add_to(map_check)
                     st_folium(map_check, height=300, width=700)
-                else:
-                    st.info("No location available for this report.")
+               
             else:
                 st.warning("Report ID not found.")
 
