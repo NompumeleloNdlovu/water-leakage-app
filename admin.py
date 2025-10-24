@@ -230,7 +230,7 @@ display_banner(
 )
 
 
-    st.markdown(
+st.markdown(
         f"""
         <style>
         .banner {{
