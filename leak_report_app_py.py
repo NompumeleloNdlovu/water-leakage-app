@@ -229,7 +229,7 @@ if page == "Home":
             <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Drop Watch SA is a citizen-driven platform that empowers communities to report water leaks
                 directly to their local municipalities. Users can provide details, upload images, specify exact locations,
-                and monitor repair progress — all in one place.
+                and monitor repair progress, all in one place.
             </p>
             <p style="font-size:1.1rem; line-height:1.8; text-align:justify;">
                 Every report helps conserve water and strengthens our infrastructure. Together, we can save every drop.
