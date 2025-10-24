@@ -172,15 +172,14 @@ def save_image_locally(image):
     
 
 # ---------------------- HOME PAGE ----------------------
-if "page" not in st.session_state:
-    st.session_state.page = "Home"
+import base64
+from pathlib import Path
 
-page = st.session_state.page
+# --- Read query params to control page ---
+query_params = st.experimental_get_query_params()
+page = query_params.get("page", ["Home"])[0]  # Default to Home
 
 if page == "Home":
-    from pathlib import Path
-    import base64
-
     # --- Banner Image ---
     banner_path = Path("images/images/WhatsApp Image 2025-10-24 at 20.20.59_8bd302d5.jpg")
     if banner_path.exists():
@@ -250,9 +249,11 @@ if page == "Home":
 
     # --- Get Started Button ---
     st.markdown("<div style='text-align:center; margin-top:30px;'>", unsafe_allow_html=True)
-    if st.button("Get Started", key="home_get_started"):
-        st.session_state.page = "Submit Report"  # Updates page, no rerun needed
+    if st.button("Get Started"):
+        st.experimental_set_query_params(page="Submit Report")  # Change URL query param
+        st.experimental_rerun()  # Reload app to show Submit Report page
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
