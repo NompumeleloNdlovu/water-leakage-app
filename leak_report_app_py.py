@@ -188,6 +188,7 @@ if page == "Home":
     
 
 # ---------------------- SUBMIT REPORT PAGE ----------------------
+# ---------------------- SUBMIT REPORT PAGE ----------------------
 elif page == "Submit Report":
     import folium
     from streamlit_folium import st_folium
@@ -235,12 +236,17 @@ elif page == "Submit Report":
         
         st.markdown("**Or select location on map:**")
         # Default map center (South Africa)
-        m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
+        default_lat, default_lon = -30.5595, 22.9375
+        m = folium.Map(location=[default_lat, default_lon], zoom_start=5)
+        
+        # --- Draggable Marker ---
         marker = folium.Marker(
-            location=[-30.5595, 22.9375],
-            draggable=True
+            location=[default_lat, default_lon],
+            draggable=True,
+            popup="Drag to select location"
         )
         marker.add_to(m)
+
         map_data = st_folium(m, height=300, width=700)
         
         # Capture coordinates from map if user moved marker
@@ -292,10 +298,11 @@ elif page == "Submit Report":
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
 
+                # --- Updated success message color ---
                 st.markdown(f"""
-                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
+                    <div style="background-color:#2e7d32;border-left:5px solid #008080;
                                 border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
+                        <h3 style="color:white;">✅ Report Submitted Successfully!</h3>
                         <p><b>Reference Code:</b> {ref_code}</p>
                         <p><b>Date & Time:</b> {timestamp}</p>
                         <p><b>Confirmation sent to:</b> {contact}</p>
@@ -306,6 +313,7 @@ elif page == "Submit Report":
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------------- CHECK STATUS PAGE ----------------------
 elif page == "Check Status":
