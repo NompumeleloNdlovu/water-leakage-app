@@ -218,7 +218,7 @@ if page == "Home":
 
     
 # ---------------------- SUBMIT REPORT PAGE ----------------------
-else:  # Using else instead of elif to avoid indentation issues
+elif page == "Submit Report":
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
     if banner_path.exists():
@@ -244,16 +244,16 @@ else:  # Using else instead of elif to avoid indentation issues
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
 
     col1, col2 = st.columns(2)
+
     with col1:
         name = st.text_input("Full Name")
         contact = st.text_input("Email Address", placeholder="example@email.com")
         municipality = st.selectbox(
             "Select Municipality",
-            [
-                "City of Johannesburg", "City of Cape Town", "eThekwini",
-                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
-            ]
+            ["City of Johannesburg", "City of Cape Town", "eThekwini",
+             "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"]
         )
+
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
         location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
@@ -269,18 +269,20 @@ else:  # Using else instead of elif to avoid indentation issues
         elif not is_valid_email(contact):
             st.error("Please enter a valid email address.")
         else:
-            image_url = ""
+            # Handle Image Upload
             if image:
                 os.makedirs("temp", exist_ok=True)
                 temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
                 with open(temp_path, "wb") as f:
                     f.write(image.read())
+
                 st.info("📤 Uploading image to Google Drive...")
-                uploaded_url = upload_to_drive(temp_path, image.name)
-                if uploaded_url:
-                    image_url = uploaded_url
+                image_path = upload_to_drive(temp_path, image.name)
+                if image_path:
                     st.success("✅ Image uploaded successfully!")
                 os.remove(temp_path)
+            else:
+                image_path = ""
 
             ref_code = str(uuid.uuid4())[:8].upper()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -293,22 +295,31 @@ else:  # Using else instead of elif to avoid indentation issues
                 "Leak Type": leak_type,
                 "Location": location,
                 "DateTime": timestamp,
-                "ImageURL": image_url,
+                "ImageURL": image_path,
                 "Status": "Pending"
             }
 
             try:
                 save_report_to_sheet(report)
                 send_reference_email(contact, ref_code, name)
-                st.success(f"✅ Report submitted successfully! Reference Code: {ref_code}")
-                st.info("Check your email for confirmation.")
+
+                st.markdown(f"""
+                    <div style="background-color:#E8F5E9;border-left:5px solid #008080;
+                                border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                        <h3 style="color:#006666;">✅ Report Submitted Successfully!</h3>
+                        <p><b>Reference Code:</b> {ref_code}</p>
+                        <p><b>Date & Time:</b> {timestamp}</p>
+                        <p><b>Confirmation sent to:</b> {contact}</p>
+                        <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
+                    </div>
+                """, unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------- CHECK STATUS PAGE ----------------------
-else:
+elif page == "Check Status":
     set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Check Report Status")
@@ -324,9 +335,9 @@ else:
             if match:
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
-                image_path = match.get("ImageURL", "")
-                if image_path:
-                    st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
+                image_url = match.get("ImageURL", "")
+                if image_url:
+                    st.image(image_url, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
             else:
