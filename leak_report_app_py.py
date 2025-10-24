@@ -173,14 +173,14 @@ def save_image_locally(image):
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
-    # Set the custom background
+    # Set background image
     set_main_background("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
 
-    # Modern styling
+    # --- Modern CSS styling ---
     st.markdown("""
         <style>
         .home-container {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(8px);
             border-radius: 18px;
             padding: 40px 35px;
@@ -220,7 +220,7 @@ if page == "Home":
         </style>
     """, unsafe_allow_html=True)
 
-    # Home page content
+    # --- Home Page Content ---
     st.markdown("""
         <div class="home-container">
             <h1>Welcome to Drop Watch SA</h1>
