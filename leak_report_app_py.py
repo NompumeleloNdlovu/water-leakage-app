@@ -402,29 +402,38 @@ elif page == "Submit Report":
 elif page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Check Report Status")
-    user_ref = st.text_input("Enter Your Reference Code")
+
+    user_reportid = st.text_input("Enter Your Report ID")
 
     if st.button("Check Status", use_container_width=True):
         try:
             client = get_gsheet_client()
             sheet = client.open_by_key(SPREADSHEET_ID).sheet1
             records = sheet.get_all_records()
-            match = next((row for row in records if row["Reference"] == user_ref), None)
+
+            # Normalize column names to remove extra spaces
+            normalized_records = []
+            for row in records:
+                normalized_row = {k.strip(): v for k, v in row.items()}
+                normalized_records.append(normalized_row)
+
+            # Look for matching report ID
+            match = next((row for row in normalized_records if str(row.get("ReportID")).strip() == user_reportid.strip()), None)
 
             if match:
-                st.success(f"Status for {user_ref}: {match['Status']}")
-                st.write(match)
-
-                latitude = match.get("Latitude")
-                longitude = match.get("Longitude")
-                if latitude and longitude:
-                    map_check = folium.Map(location=[latitude, longitude], zoom_start=16)
-                    folium.Marker([latitude, longitude], tooltip=f"Leak: {match['Leak Type']}").add_to(map_check)
+                st.success(f"Status for Report ID {user_reportid}: {match.get('Status', 'Unknown')}")
+                
+                # Show location on map if available
+                lat = match.get("Latitude")
+                lon = match.get("Longitude")
+                if lat and lon:
+                    map_check = folium.Map(location=[float(lat), float(lon)], zoom_start=16)
+                    folium.Marker([float(lat), float(lon)], tooltip=f"Leak: {match.get('Leak Type','Unknown')}").add_to(map_check)
                     st_folium(map_check, height=300, width=700)
                 else:
                     st.info("No location available for this report.")
             else:
-                st.warning("Reference code not found.")
+                st.warning("Report ID not found.")
 
         except Exception as e:
             st.error(f"Could not check status: {e}")
