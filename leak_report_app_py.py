@@ -497,15 +497,6 @@ elif page == "Check Status":
                 st.success(f"Status for Report ID {user_reportid}: {match.get('Status', 'Unknown')}")
                 st.write(match)
 
-                # Show coordinates on map if available
-                latitude = match.get("Latitude")
-                longitude = match.get("Longitude")
-                if latitude and longitude:
-                    map_check = folium.Map(location=[latitude, longitude], zoom_start=16)
-                    folium.Marker([latitude, longitude], tooltip=f"Leak: {match.get('Leak Type','Leak')}").add_to(map_check)
-                    st_folium(map_check, height=300, width=700)
-                else:
-                    st.info("No location available for this report.")
 
             else:
                 st.warning("Report ID not found. Please check your input.")
