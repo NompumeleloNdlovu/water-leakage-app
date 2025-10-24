@@ -158,39 +158,7 @@ button[kind="primary"]:hover, div[data-testid="stButton"] button:hover {{
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------- GOOGLE DRIVE UPLOAD ----------------------
-def upload_to_drive(file_path, file_name):
-    """Uploads an image to a Shared Google Drive folder and returns a public URL."""
-    creds = Credentials.from_service_account_info(
-        st.secrets["google_service_account"],
-        scopes=["https://www.googleapis.com/auth/drive"]
-    )
-    drive_service = build("drive", "v3", credentials=creds)
 
-    folder_id = "13yj6S7b5Jvtfe0W4XbJMVi1K5eX-oqbj"
-
-    file_metadata = {
-        "name": file_name,
-        "parents": [folder_id]
-    }
-
-    media = MediaFileUpload(file_path, mimetype="image/jpeg")
-
-    uploaded_file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields="id",
-        supportsAllDrives=True  # Important for shared drives
-    ).execute()
-
-    # Make the file publicly viewable
-    drive_service.permissions().create(
-        fileId=uploaded_file.get("id"),
-        body={"role": "reader", "type": "anyone"},
-        supportsAllDrives=True
-    ).execute()
-
-    return f"https://drive.google.com/uc?id={uploaded_file.get('id')}"
 
 # ---------------------- HOME PAGE ----------------------
 if page == "Home":
@@ -210,76 +178,40 @@ if page == "Home":
     st.markdown("</div>", unsafe_allow_html=True)
 
     
-# ---------------------- SUBMIT REPORT PAGE ----------------------
-elif page == "Submit Report":
-    # --- Banner ---
-    banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
-    if banner_path.exists():
-        with open(banner_path, "rb") as f:
-            img_base64 = base64.b64encode(f.read()).decode()
-        st.markdown(f"""
-            <div style="position:relative;width:100%;height:140px;overflow:hidden;border-radius:15px;margin-bottom:25px;">
-                <img src="data:image/jpg;base64,{img_base64}" 
-                     style="width:100%; height:100%; object-fit:cover; filter: brightness(0.65);">
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                            color:white;font-size:26px;font-weight:bold;text-shadow:1px 1px 4px rgba(0,0,0,0.6);
-                            font-family:'Poppins', sans-serif;">
-                    Report a Water Leak
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠ Banner image not found.")
+# ---------------------- LOCAL IMAGE UPLOAD ----------------------
+def save_image_locally(image):
+    """Saves the uploaded image locally and returns the file path."""
+    os.makedirs("leak_images", exist_ok=True)
+    image_filename = f"{uuid.uuid4()}_{image.name}"
+    image_path = os.path.join("leak_images", image_filename)
+    with open(image_path, "wb") as f:
+        f.write(image.read())
+    return image_path
 
-    # --- Form Container ---
+# ---------------------- SUBMIT REPORT PAGE ----------------------
+if page == "Submit Report":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Submit a Water Leak Report")
     st.markdown("Please fill in the details below to help your municipality respond promptly.")
+    
+    # Collect user input
+    name = st.text_input("Full Name")
+    contact = st.text_input("Email Address", placeholder="example@email.com")
+    municipality = st.selectbox("Select Municipality", ["City of Johannesburg", "City of Cape Town", "eThekwini", "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"])
+    leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
+    location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
+    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        name = st.text_input("Full Name")
-        contact = st.text_input("Email Address", placeholder="example@email.com")
-        municipality = st.selectbox(
-            "Select Municipality",
-            [
-                "City of Johannesburg", "City of Cape Town", "eThekwini",
-                "Buffalo City", "Mangaung", "Nelson Mandela Bay", "Other"
-            ]
-        )
-
-    with col2:
-        leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-        location = st.text_input("Location of Leak", placeholder="e.g. 123 Main Rd, Soweto")
-        image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
-
-    st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
-    submit_clicked = st.button("Submit Report", use_container_width=False)
-    st.markdown("</div>", unsafe_allow_html=True)
+    submit_clicked = st.button("Submit Report", use_container_width=True)
 
     if submit_clicked:
         if not name or not contact or not location:
             st.error("All fields are required.")
-        elif not is_valid_email(contact):
-            st.error("Please enter a valid email address.")
         else:
-            # --- Handle Image Upload ---
+            # Save image locally
             if image:
-                os.makedirs("temp", exist_ok=True)
-                temp_path = os.path.join("temp", f"{uuid.uuid4()}_{image.name}")
-                with open(temp_path, "wb") as f:
-                    f.write(image.read())
-
-                st.info("📤 Uploading image to Google Drive...")
-                try:
-                    image_path = upload_to_drive(temp_path, image.name)
-                    st.success("✅ Image uploaded successfully!")
-                except Exception as e:
-                    st.error(f"Google Drive upload failed: {e}")
-                    image_path = ""
-                finally:
-                    os.remove(temp_path)
+                image_path = save_image_locally(image)
+                st.success(f"✅ Image saved locally! File path: {image_path}")
             else:
                 image_path = ""
 
@@ -299,9 +231,10 @@ elif page == "Submit Report":
             }
 
             try:
-                save_report_to_sheet(report)
-                send_reference_email(contact, ref_code, name)
+                save_report_to_sheet(report)  # Save to Google Sheets or database
+                send_reference_email(contact, ref_code, name)  # Send email to user
 
+                # Show success message
                 st.markdown(f"""
                     <div style="background-color:#E8F5E9;border-left:5px solid #008080;
                                 border-radius:12px;padding:20px;margin-top:30px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
@@ -312,21 +245,22 @@ elif page == "Submit Report":
                         <p style="margin-top:10px;">Use your reference code under <b>Check Status</b> to track your report.</p>
                     </div>
                 """, unsafe_allow_html=True)
+
             except Exception as e:
                 st.error(f"Failed to save report: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # ---------------------- CHECK STATUS PAGE ----------------------
-elif page == "Check Status":
-    set_main_background("images/images/360_F_755817004_7CERvuUmlmK4p5cHNFo00S1oh5JVqoj8.jpg")
+if page == "Check Status":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.header("Check Report Status")
     user_ref = st.text_input("Enter Your Reference Code")
 
     if st.button("Check Status", use_container_width=True):
         try:
-            client = get_gsheet_client()
+            client = get_gsheet_client()  # or your database client
             sheet = client.open_by_key(SPREADSHEET_ID).sheet1
             records = sheet.get_all_records()
             match = next((row for row in records if row["Reference"] == user_ref), None)
@@ -334,14 +268,18 @@ elif page == "Check Status":
             if match:
                 st.success(f"Status for {user_ref}: {match['Status']}")
                 st.write(match)
+
+                # Display image if exists
                 image_path = match.get("ImageURL", "")
-                if image_path:
+                if image_path and os.path.exists(image_path):
                     st.image(image_path, caption=f"Report {user_ref}", use_column_width=True)
                 else:
                     st.info("No image uploaded for this report.")
             else:
                 st.warning("Reference code not found.")
+
         except Exception as e:
             st.error(f"Could not check status: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
