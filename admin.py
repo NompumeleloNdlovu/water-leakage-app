@@ -256,24 +256,6 @@ def home_page(df):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
 
-# --- CSS for pulse-box (keep once in your main file, outside functions) ---
-st.markdown(
-    """
-    <style>
-    .pulse-box {
-        background-color: #ffcccc;
-        color: #a80000;
-        padding: 10px 15px;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 18px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # ------------------ MUNICIPAL OVERVIEW PAGE ------------------
 def municipal_overview_page(df):
     if df.empty:
