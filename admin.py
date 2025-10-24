@@ -296,7 +296,7 @@ reports_at_login = st.session_state.get("reports_at_login", total_reports)
 new_reports = max(total_reports - reports_at_login, 0)
 
     # --- Live Counters using Streamlit ---
- col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
   placeholder_total = col1.empty()
