@@ -208,7 +208,7 @@ def home_page(df):
         greeting = "Good evening"
 
     # --- Banner with background image ---
-    banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 10.26.54_8e6091dc.jpg"
+    banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
     banner_base64 = get_base64_image(banner_image_path)
 
     st.markdown(
