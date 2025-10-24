@@ -7,6 +7,7 @@ import base64
 from datetime import datetime, timedelta
 import time
 import os
+
 # ------------------ CONFIG ------------------
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
 SHEET_KEY = st.secrets["general"]["sheet_id"]
@@ -32,9 +33,6 @@ def logout():
     st.session_state.admin_name = ""
     st.session_state.admin_municipality = ""
     st.success("You have been logged out.")
-
-
-
 
 # ------------------ BACKGROUND IMAGE ------------------
 def set_background_local(image_path, show_on_page=None, sidebar=False):
@@ -94,15 +92,10 @@ except Exception as e:
     st.error(f"Failed to load Admin Sheet: {e}")
     st.stop()
 
-
 # ------------------ LOGIN LOGIC ------------------
 def login_user(code):
-    """
-    Authenticate admin and set session state.
-    """
-    code = str(code).strip()  # Ensure string and remove spaces
+    code = str(code).strip()
     admins_df['AdminCode'] = admins_df['AdminCode'].astype(str).str.strip()
-
     admin_info = admins_df[admins_df['AdminCode'] == code]
     if not admin_info.empty:
         st.session_state.logged_in = True
@@ -114,9 +107,7 @@ def login_user(code):
     else:
         return False
 
-
 # ------------------ AUTHENTICATION ------------------
-
 def login_page():
     st.markdown(
         f"<div style='background-color:{COLORS['teal_blue']};padding:40px;"
@@ -124,10 +115,7 @@ def login_page():
         f"<h1 style='color:white;'>Drop Watch SA - Admin Login</h1></div>",
         unsafe_allow_html=True
     )
-
     code = st.text_input("", placeholder="Enter Admin Code", type="password")
-
-    # Add a placeholder for login status message
     login_status = st.empty()
 
     if st.button("Login"):
@@ -138,27 +126,20 @@ def login_page():
             st.session_state.admin_municipality = admin_info.iloc[0]['Municipality']
             st.session_state.page = "Home"
             st.session_state.last_login = datetime.now()
-            st.session_state._trigger_rerun = True  # mark for rerun next cycle
+            st.session_state._trigger_rerun = True
             login_status.success("Login successful! Redirecting...")
         else:
             login_status.error("Invalid code")
 
+# ------------------ HOME PAGE ------------------
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
 
-
-
-# ------------------ HOME PAGE with WELCOME BANNER ------------------
-import streamlit as st
-from datetime import datetime, timedelta
-import time
-import base64
 def display_banner(image_path, title_text):
-    """
-    Display a banner with overlay text at the top of a page.
-    """
     if not os.path.exists(image_path):
         st.warning("Banner image not found.")
         return
-
     banner_base64 = get_base64_image(image_path)
     st.markdown(
         f"""
@@ -193,76 +174,6 @@ def display_banner(image_path, title_text):
             z-index: 2;
             text-align: center;
         }}
-        </style>
-
-        <div class="banner">
-            <div class="overlay"></div>
-            <div class="banner-text">{title_text}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-
-def home_page(df):
-    if df.empty:
-        st.warning("No reports found yet.")
-        return
-
- # --- Time-based greeting ---
-hour = datetime.now().hour
-if hour < 12:
-    greeting = "Good morning"
-elif hour < 17:
-    greeting = "Good afternoon"
-else:
-    greeting = "Good evening"
-
-# --- Banner with background image ---
-banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
-display_banner(
-    banner_image_path,
-    f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
-)
-
-
-st.markdown(
-        f"""
-        <style>
-        .banner {{
-            position: relative;
-            background-image: url("data:image/jpg;base64,{banner_base64}");
-            background-size: cover;
-            background-position: center;
-            height: 250px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 32px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
-            margin-bottom: 20px;
-        }}
-        .overlay {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.35);
-            border-radius: 20px;
-        }}
-        .banner-text {{
-            position: relative;
-            z-index: 2;
-            text-align: center;
-        }}
         .pulse-box {{
             background-color: #ffcccc;
             color: #a80000;
@@ -276,80 +187,89 @@ st.markdown(
 
         <div class="banner">
             <div class="overlay"></div>
-            <div class="banner-text">
-                {greeting}, {st.session_state.admin_name}!<br>
-                Welcome to the {st.session_state.admin_municipality} Admin Portal
-            </div>
+            <div class="banner-text">{title_text}</div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # --- Metrics calculations ---
-df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
-total_reports = len(df_filtered)
-resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
-pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
+def home_page(df):
+    if df.empty:
+        st.warning("No reports found yet.")
+        return
 
-    # Reports since last login
-reports_at_login = st.session_state.get("reports_at_login", total_reports)
-new_reports = max(total_reports - reports_at_login, 0)
+    hour = datetime.now().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
 
-    # --- Live Counters using Streamlit ---
-col1, col2, col3, col4 = st.columns(4)
+    banner_image_path = "images/images/WhatsApp Image 2025-10-22 at 00.08.08_8c98bfbb.jpg"
+    display_banner(
+        banner_image_path,
+        f"{greeting}, {st.session_state.admin_name}!\nWelcome to the {st.session_state.admin_municipality} Admin Portal"
+    )
+
+    df_filtered = df[df['Municipality'] == st.session_state.admin_municipality] if "Municipality" in df.columns else df
+    total_reports = len(df_filtered)
+    resolved_reports = (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0
+    pending_reports = (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0
+    reports_at_login = st.session_state.get("reports_at_login", total_reports)
+    new_reports = max(total_reports - reports_at_login, 0)
+
+    col1, col2, col3, col4 = st.columns(4)
 
     # Total Reports
- placeholder_total = col1.empty()
+    placeholder_total = col1.empty()
     for i in range(total_reports + 1):
         placeholder_total.metric("Total Reports", i)
         time.sleep(0.02)
 
     # Resolved Reports
-placeholder_resolved = col2.empty()
+    placeholder_resolved = col2.empty()
     for i in range(resolved_reports + 1):
         placeholder_resolved.metric("Resolved Reports", i)
         time.sleep(0.02)
 
-    # Pending Reports with pulse if >0
-placeholder_pending = col3.empty()
+    # Pending Reports
+    placeholder_pending = col3.empty()
     if pending_reports > 0:
         for i in range(pending_reports + 1):
             placeholder_pending.markdown(
-                f"<div class='pulse-box'>⚠️ Pending Reports: {i}</div>", unsafe_allow_html=True
+                f"<div class='pulse-box'>⚠ Pending Reports: {i}</div>", unsafe_allow_html=True
             )
             time.sleep(0.02)
     else:
         placeholder_pending.metric("Pending Reports", 0)
 
     # New Reports since last login
-placeholder_new = col4.empty()
+    placeholder_new = col4.empty()
     for i in range(new_reports + 1):
         placeholder_new.metric("New Since Last Login", i)
         time.sleep(0.02)
 
+# ------------------ MUNICIPAL OVERVIEW PAGE ------------------
 def municipal_overview_page(df):
     if df.empty:
         st.warning("No reports found yet.")
         return
 
-    # Header
     st.markdown(
         "<div style='background-color: rgba(245,245,245,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
         "<h1 style='text-align:center;color:black;'>Municipal Overview</h1></div>",
         unsafe_allow_html=True
     )
 
-    # Filter by logged-in admin's municipality
-admin_muni = st.session_state.admin_municipality
-df_filtered = df[df['Municipality'] == admin_muni] if "Municipality" in df.columns else df
+    admin_muni = st.session_state.admin_municipality
+    df_filtered = df[df['Municipality'] == admin_muni] if "Municipality" in df.columns else df
 
-    # Metrics
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Reports", len(df_filtered))
-col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
-col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Reports", len(df_filtered))
+    col2.metric("Resolved", (df_filtered["Status"] == "Resolved").sum() if "Status" in df_filtered.columns else 0)
+    col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in df_filtered.columns else 0)
 
-    # Charts
     if not df_filtered.empty:
         # Leak Type Distribution
         st.markdown("### Leak Type Distribution")
@@ -381,7 +301,7 @@ col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Reports Over Time (Scatter)
+        # Reports Over Time
         st.markdown("### Reports Over Time")
         if "DateTime" in df.columns:
             df_plot = df_filtered.copy()
@@ -399,9 +319,7 @@ col3.metric("Pending", (df_filtered["Status"] == "Pending").sum() if "Status" in
                 )
                 st.plotly_chart(fig_scatter, use_container_width=True)
 
-
-
-# ------------------ DASHBOARD ------------------
+# ------------------ DASHBOARD PAGE ------------------
 def dashboard_page():
     st.markdown(f"<div style='background-color: rgba(115,169,194,0.8); padding:15px; border-radius:10px; margin-bottom:10px;'>"
                 f"<h1 style='text-align:center;color:black;'>Drop Watch SA - Dashboard (All Municipalities)</h1></div>", unsafe_allow_html=True)
@@ -409,8 +327,8 @@ def dashboard_page():
     st.markdown(f"<div style='background-color: rgba(245,245,245,0.8); padding:10px; border-radius:10px;'>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Reports", len(df))
-    col2.metric("Resolved", (df["Status"] == "Resolved").sum())
-    col3.metric("Pending", (df["Status"] == "Pending").sum())
+    col2.metric("Resolved", (df["Status"] == "Resolved").sum() if "Status" in df.columns else 0)
+    col3.metric("Pending", (df["Status"] == "Pending").sum() if "Status" in df.columns else 0)
 
     if "Leak Type" in df.columns:
         bar_data = df['Leak Type'].value_counts().reset_index()
@@ -447,14 +365,11 @@ def dashboard_page():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ MANAGE REPORTS ------------------
-import streamlit as st
-
 def manage_reports_page(df, sheet):
     if not st.session_state.get("logged_in") or "admin_municipality" not in st.session_state:
         st.warning("Please log in to view this page.")
         return
 
-    # Full-page background with semi-transparent overlay
     st.markdown(
         """
         <div style="
@@ -471,7 +386,6 @@ def manage_reports_page(df, sheet):
     )
 
     st.markdown("## Manage Reports")
-
     admin_muni = st.session_state.admin_municipality
     df_admin = df[df['Municipality'] == admin_muni]
 
@@ -485,36 +399,23 @@ def manage_reports_page(df, sheet):
 
     for idx, row in df_admin.iterrows():
         with st.expander(f"Report #{row[report_id_col]} — {row.get(location_col,'N/A')}"):
-            # Determine row color based on status
             status = row.get("Status", "Pending")
             color = "#ffcccc" if status == "Pending" else "#ccffcc"
 
-            # Display report info in a colored box
-            st.markdown(
-                f"<div style='background-color:{color};padding:10px;border-radius:10px;'>",
-                unsafe_allow_html=True
-            )
-
-            # Drop image-related columns so they don't appear in main table
+            st.markdown(f"<div style='background-color:{color};padding:10px;border-radius:10px;'>", unsafe_allow_html=True)
             display_row = row.drop(labels=['Image', 'ImageURL'], errors='ignore')
             st.write(display_row)
 
-            # Display clickable image URL if available
             image_url = row.get("ImageURL")
             if image_url and isinstance(image_url, str) and image_url.strip():
-                st.markdown(
-                    f'<a href="{image_url}" target="_blank">View Uploaded Image</a>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<a href="{image_url}" target="_blank">View Uploaded Image</a>', unsafe_allow_html=True)
             else:
-                st.markdown("_No image uploaded for this report._", unsafe_allow_html=True)
+                st.markdown("No image uploaded for this report.", unsafe_allow_html=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-            # Status update
             options = ["Pending", "Resolved"]
-            if status not in options:
-                status = "Pending"
+            if status not in options: status = "Pending"
             new_status = st.selectbox("Update Status", options, index=options.index(status), key=f"status_{idx}")
             if st.button("Update", key=f"update_{idx}"):
                 try:
@@ -527,20 +428,17 @@ def manage_reports_page(df, sheet):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-
-
 # ------------------ SIDEBAR ------------------
 def custom_sidebar():
     set_background_local(
         "images/images/WhatsApp Image 2025-10-21 at 22.42.03_3d1ddaaa.jpg",
-        show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"], 
+        show_on_page=["Home","Municipal Overview","Dashboard","Manage Reports"],
         sidebar=True
     )
 
     st.sidebar.markdown(
         f"<div style='background-color: rgba(255,255,255,0.8); padding:15px;border-radius:10px;text-align:center;'>"
-        f"<h3 style='color:black;'>Drop Watch SA</h3></div>", 
+        f"<h3 style='color:black;'>Drop Watch SA</h3></div>",
         unsafe_allow_html=True
     )
 
@@ -551,13 +449,7 @@ def custom_sidebar():
 
     if st.session_state.logged_in:
         if st.sidebar.button("Logout"):
-            st.session_state.logged_in = False
-            st.session_state.page = "Login"
-            st.success("You have been logged out.")
-         
-
-
-
+            logout()
 
 # ------------------ PAGE RENDER ------------------
 if not st.session_state.logged_in:
@@ -571,11 +463,11 @@ else:
     elif st.session_state.page == "Dashboard": dashboard_page()
     elif st.session_state.page == "Manage Reports": manage_reports_page(df, sheet)
 
-# Handle deferred rerun safely (modern Streamlit)
+# Handle deferred rerun safely
 if "_trigger_rerun" in st.session_state and st.session_state._trigger_rerun:
     st.session_state._trigger_rerun = False
     try:
-        st.rerun()  # replaces st.experimental_rerun()
+        st.rerun()
     except Exception:
         pass
 
