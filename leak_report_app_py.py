@@ -191,6 +191,10 @@ elif page == "Submit Report":
     import folium
     from streamlit_folium import st_folium
     from pathlib import Path
+    import base64
+    import uuid
+    from datetime import datetime
+    import os
 
     # --- Banner ---
     banner_path = Path("images/images/360_F_1467195115_oNV9D8TzjhTF3rfhbty256ZTHgGodmtW.jpg")
@@ -231,33 +235,43 @@ elif page == "Submit Report":
 
     with col2:
         leak_type = st.selectbox("Type of Leak", ["Burst Pipe", "Leakage", "Sewage Overflow", "Other"])
-        location_input = st.text_input("Location (Coordinates or Address)")
+        # Location text input updates dynamically
+        location_input = st.text_input("Location (Address or Coordinates)")
 
-        st.markdown("*Or select location on map:*")
-        # Default map center (South Africa)
+        st.markdown("*Or select location on the map (drag or double-click pin):*")
         m = folium.Map(location=[-30.5595, 22.9375], zoom_start=5)
 
-        # If coordinates are already typed, set marker there
-        try:
-            if "," in location_input:
+        # Initialize marker
+        if location_input and "," in location_input:
+            try:
                 lat, lon = map(float, location_input.split(","))
-                marker = folium.Marker(location=[lat, lon], draggable=True)
-            else:
-                marker = folium.Marker(location=[-30.5595, 22.9375], draggable=True)
-        except:
-            marker = folium.Marker(location=[-30.5595, 22.9375], draggable=True)
+            except:
+                lat, lon = -30.5595, 22.9375
+        else:
+            lat, lon = -30.5595, 22.9375
 
+        marker = folium.Marker(location=[lat, lon], draggable=True)
         marker.add_to(m)
+
+        # Display map
         map_data = st_folium(m, height=300, width=700)
 
-        # Update location_input automatically if pin moved
-        if map_data and map_data.get("last_clicked"):
-            latitude = map_data["last_clicked"]["lat"]
-            longitude = map_data["last_clicked"]["lng"]
-            location_input = f"{latitude},{longitude}"
-        else:
-            latitude = None
-            longitude = None
+        # Update location_input dynamically
+        latitude, longitude = None, None
+        if map_data:
+            # Double-clicked or dragged marker
+            if map_data.get("last_object_clicked"):
+                latitude = map_data["last_object_clicked"]["lat"]
+                longitude = map_data["last_object_clicked"]["lng"]
+            elif map_data.get("last_clicked"):
+                latitude = map_data["last_clicked"]["lat"]
+                longitude = map_data["last_clicked"]["lng"]
+
+            if latitude and longitude:
+                location_input = f"{latitude},{longitude}"
+
+    # --- Image uploader (before submit) ---
+    image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
 
     st.markdown("<div style='text-align:center; margin-top:20px;'>", unsafe_allow_html=True)
     submit_clicked = st.button("Submit Report", use_container_width=False)
@@ -270,7 +284,6 @@ elif page == "Submit Report":
             st.error("Please enter a valid email address.")
         else:
             # --- Save Image Locally ---
-            image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
             if image:
                 os.makedirs("leak_images", exist_ok=True)
                 image_path = os.path.join("leak_images", f"{uuid.uuid4()}_{image.name}")
@@ -282,12 +295,6 @@ elif page == "Submit Report":
             ref_code = str(uuid.uuid4())[:8].upper()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Parse coordinates if input is lat,long
-            try:
-                lat_val, lon_val = map(float, location_input.split(","))
-            except:
-                lat_val, lon_val = None, None
-
             report = {
                 "Reference": ref_code,
                 "Name": name,
@@ -295,8 +302,8 @@ elif page == "Submit Report":
                 "Municipality": municipality,
                 "Leak Type": leak_type,
                 "Location": location_input,
-                "Latitude": lat_val,
-                "Longitude": lon_val,
+                "Latitude": latitude,
+                "Longitude": longitude,
                 "DateTime": timestamp,
                 "ImageURL": image_path,
                 "Status": "Pending"
